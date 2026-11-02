@@ -1,0 +1,18 @@
+# Normalise line endings: text files use LF in the repo, checked out native on Windows.
+* text=auto
+
+# Explicit source types kept as LF in the repository.
+*.cs       text eol=lf
+*.csproj   text eol=lf
+*.sln      text eol=crlf
+*.xaml     text eol=lf
+*.json     text eol=lf
+*.props    text eol=lf
+*.targets  text eol=lf
+*.md       text eol=lf
+
+# Binary assets — never normalise.
+*.png  binary
+*.jpg  binary
+*.ico  binary
+*.dll  binary

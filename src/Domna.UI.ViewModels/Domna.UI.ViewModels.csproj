@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Presentation logic, no WPF: the view models are plain .NET and testable
+       without a UI thread. Only Domna.App references a windowing framework. -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\Domna.Domain\Domna.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+  </ItemGroup>
+
+</Project>

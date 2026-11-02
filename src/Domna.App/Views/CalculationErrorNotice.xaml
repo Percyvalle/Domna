@@ -1,0 +1,44 @@
+<UserControl x:Class="Domna.App.Views.CalculationErrorNotice"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:Domna.UI.ViewModels;assembly=Domna.UI.ViewModels"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=vm:MainViewModel}"
+             Background="{StaticResource Brush.Scrim}">
+
+    <!-- The polynomial left the reals. The previous result stays on screen, and this
+         says so plainly rather than letting the operator read numbers that belong to
+         a different parameter set. -->
+
+    <Border Width="520" Padding="28"
+            HorizontalAlignment="Center" VerticalAlignment="Center"
+            Background="{StaticResource Brush.Panel}"
+            BorderBrush="{StaticResource Brush.Warning}"
+            BorderThickness="1"
+            CornerRadius="6">
+        <StackPanel>
+            <TextBlock Style="{StaticResource Text.ColumnHeader}"
+                       FontSize="17"
+                       Foreground="{StaticResource Brush.WarningText}"
+                       Text="Расчёт не выполнен" />
+
+            <TextBlock Style="{StaticResource Text.Body}" Margin="0,12,0,0"
+                       Text="Полином вернул нечисловой результат. Значения на экране — от предыдущего расчёта, они не соответствуют текущему вводу." />
+
+            <TextBlock Style="{StaticResource Text.Mono}" Margin="0,12,0,0"
+                       TextWrapping="Wrap" LineHeight="18"
+                       Text="{Binding CalculationErrorDetail}" />
+
+            <StackPanel Orientation="Horizontal" Margin="0,20,0,0">
+                <Button Style="{StaticResource Button.Primary}"
+                        Command="{Binding RestoreLastInputCommand}"
+                        Content="Вернуть последний ввод" />
+                <Button Style="{StaticResource Button.Ghost}" Margin="10,0,0,0"
+                        Command="{Binding DismissCalculationErrorCommand}"
+                        Content="Закрыть" />
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</UserControl>

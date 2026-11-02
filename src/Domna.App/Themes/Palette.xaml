@@ -1,0 +1,111 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=System.Runtime">
+
+    <!-- The dark industrial theme of the approved dashboard design. Colour is not
+         decoration here: the three measuring positions, the heat scale and the
+         out-of-range red carry meaning and must not be reassigned (see
+         docs/ui-design-inputs.md §6.4). -->
+
+    <!-- Surfaces, from the window backwards to the input field. -->
+    <Color x:Key="Color.Surface">#FF1A1F2E</Color>
+    <Color x:Key="Color.Column">#FF1E2333</Color>
+    <Color x:Key="Color.Panel">#FF232A3E</Color>
+    <Color x:Key="Color.Field">#FF171B27</Color>
+    <Color x:Key="Color.Scrim">#B812161F</Color>
+
+    <!-- Rules and outlines, from the faintest separator to the strongest border. -->
+    <Color x:Key="Color.BorderSoft">#FF262D40</Color>
+    <Color x:Key="Color.Border">#FF313A52</Color>
+    <Color x:Key="Color.BorderStrong">#FF3B4560</Color>
+
+    <!-- Text, from the brightest reading to the faintest annotation. -->
+    <Color x:Key="Color.TextBright">#FFF5F7FB</Color>
+    <Color x:Key="Color.Text">#FFE8ECF4</Color>
+    <Color x:Key="Color.TextBody">#FFD6DCEA</Color>
+    <Color x:Key="Color.TextSoft">#FFC3CBDD</Color>
+    <Color x:Key="Color.TextMuted">#FF9AA5BD</Color>
+    <Color x:Key="Color.TextDim">#FF8F9BB3</Color>
+    <Color x:Key="Color.TextFaint">#FF6D7996</Color>
+    <Color x:Key="Color.TextFainter">#FF5C6786</Color>
+
+    <!-- Accent: the one colour that means "act" or "this is the baseline". -->
+    <Color x:Key="Color.Accent">#FFF0A500</Color>
+    <Color x:Key="Color.AccentHover">#FFFFB61F</Color>
+    <Color x:Key="Color.AccentWash">#1FF0A500</Color>
+
+    <!-- Out of the fitted region. Never used for anything else. -->
+    <Color x:Key="Color.Warning">#FFE03030</Color>
+    <Color x:Key="Color.WarningText">#FFF0B4B4</Color>
+    <Color x:Key="Color.WarningWash">#17E03030</Color>
+
+    <!-- The three measuring positions. Fixed by the domain, not by taste. -->
+    <Color x:Key="Color.Zone.Center">#FFE05010</Color>
+    <Color x:Key="Color.Zone.OreRidge">#FFD09000</Color>
+    <Color x:Key="Color.Zone.Periphery">#FF2090D0</Color>
+
+    <!-- The cold-to-hot scale the furnace-top map is painted with, blue through
+         amber to red. The two middle stops are not decoration: without them the
+         blue-to-amber leg interpolates through green, and green would read as a
+         third meaningful state on a screen where colour carries meaning. -->
+    <GradientStopCollection x:Key="Heat.Ramp">
+        <GradientStop Offset="0.00" Color="#FF1A6FB0" />
+        <GradientStop Offset="0.25" Color="#FF5B7F9E" />
+        <GradientStop Offset="0.40" Color="#FFA8894A" />
+        <GradientStop Offset="0.50" Color="#FFE0A000" />
+        <GradientStop Offset="1.00" Color="#FFE83010" />
+    </GradientStopCollection>
+
+    <!-- The printed protocol is paper, and stays paper in a dark room. -->
+    <Color x:Key="Color.Paper">#FFF7F7F5</Color>
+    <Color x:Key="Color.Ink">#FF1F1E1C</Color>
+    <Color x:Key="Color.InkMuted">#FF6B6862</Color>
+    <Color x:Key="Color.Rule">#FFD8D6D1</Color>
+    <Color x:Key="Color.RuleStrong">#FFB8B6B1</Color>
+
+    <SolidColorBrush x:Key="Brush.Surface" Color="{StaticResource Color.Surface}" />
+    <SolidColorBrush x:Key="Brush.Column" Color="{StaticResource Color.Column}" />
+    <SolidColorBrush x:Key="Brush.Panel" Color="{StaticResource Color.Panel}" />
+    <SolidColorBrush x:Key="Brush.Field" Color="{StaticResource Color.Field}" />
+    <SolidColorBrush x:Key="Brush.Scrim" Color="{StaticResource Color.Scrim}" />
+
+    <SolidColorBrush x:Key="Brush.BorderSoft" Color="{StaticResource Color.BorderSoft}" />
+    <SolidColorBrush x:Key="Brush.Border" Color="{StaticResource Color.Border}" />
+    <SolidColorBrush x:Key="Brush.BorderStrong" Color="{StaticResource Color.BorderStrong}" />
+
+    <SolidColorBrush x:Key="Brush.TextBright" Color="{StaticResource Color.TextBright}" />
+    <SolidColorBrush x:Key="Brush.Text" Color="{StaticResource Color.Text}" />
+    <SolidColorBrush x:Key="Brush.TextBody" Color="{StaticResource Color.TextBody}" />
+    <SolidColorBrush x:Key="Brush.TextSoft" Color="{StaticResource Color.TextSoft}" />
+    <SolidColorBrush x:Key="Brush.TextMuted" Color="{StaticResource Color.TextMuted}" />
+    <SolidColorBrush x:Key="Brush.TextDim" Color="{StaticResource Color.TextDim}" />
+    <SolidColorBrush x:Key="Brush.TextFaint" Color="{StaticResource Color.TextFaint}" />
+    <SolidColorBrush x:Key="Brush.TextFainter" Color="{StaticResource Color.TextFainter}" />
+
+    <SolidColorBrush x:Key="Brush.Accent" Color="{StaticResource Color.Accent}" />
+    <SolidColorBrush x:Key="Brush.AccentHover" Color="{StaticResource Color.AccentHover}" />
+    <SolidColorBrush x:Key="Brush.AccentWash" Color="{StaticResource Color.AccentWash}" />
+
+    <SolidColorBrush x:Key="Brush.Warning" Color="{StaticResource Color.Warning}" />
+    <SolidColorBrush x:Key="Brush.WarningText" Color="{StaticResource Color.WarningText}" />
+    <SolidColorBrush x:Key="Brush.WarningWash" Color="{StaticResource Color.WarningWash}" />
+
+    <SolidColorBrush x:Key="Brush.Zone.Center" Color="{StaticResource Color.Zone.Center}" />
+    <SolidColorBrush x:Key="Brush.Zone.OreRidge" Color="{StaticResource Color.Zone.OreRidge}" />
+    <SolidColorBrush x:Key="Brush.Zone.Periphery" Color="{StaticResource Color.Zone.Periphery}" />
+
+    <SolidColorBrush x:Key="Brush.Paper" Color="{StaticResource Color.Paper}" />
+    <SolidColorBrush x:Key="Brush.Ink" Color="{StaticResource Color.Ink}" />
+    <SolidColorBrush x:Key="Brush.InkMuted" Color="{StaticResource Color.InkMuted}" />
+    <SolidColorBrush x:Key="Brush.Rule" Color="{StaticResource Color.Rule}" />
+    <SolidColorBrush x:Key="Brush.RuleStrong" Color="{StaticResource Color.RuleStrong}" />
+
+    <!-- Two families, one for prose and one for every number the operator compares
+         column-to-column. IBM Plex is the design's choice; the rest of each list is
+         what a shop-floor Windows machine actually has installed. -->
+    <FontFamily x:Key="Font.Sans">IBM Plex Sans, Segoe UI, Tahoma</FontFamily>
+    <FontFamily x:Key="Font.Mono">IBM Plex Mono, Cascadia Mono, Consolas, Courier New</FontFamily>
+
+    <sys:Double x:Key="Size.Gutter">18</sys:Double>
+
+</ResourceDictionary>

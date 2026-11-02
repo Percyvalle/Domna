@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Pure domain math: no I/O, no DI, no async, no UI. References the Domain
+       vocabulary and nothing else. -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\Domna.Domain\Domna.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

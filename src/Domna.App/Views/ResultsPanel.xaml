@@ -1,0 +1,328 @@
+<UserControl x:Class="Domna.App.Views.ResultsPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:controls="clr-namespace:Domna.App.Controls"
+             xmlns:conv="clr-namespace:Domna.App.Converters"
+             xmlns:vm="clr-namespace:Domna.UI.ViewModels;assembly=Domna.UI.ViewModels"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=vm:MainViewModel}">
+
+    <UserControl.Resources>
+        <conv:ParameterValueConverter x:Key="ParameterValue" />
+        <!-- An open gap is what the operator is here to close, so it carries the
+             accent. The derived ratio never does: it is not a goal of its own, it is
+             what the other two leave behind. -->
+        <Style x:Key="Text.TargetValueActive" TargetType="TextBlock" BasedOn="{StaticResource Text.TargetValue}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsOpen}" Value="True">
+                    <Setter Property="Foreground" Value="{StaticResource Brush.Accent}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsDerived}" Value="True">
+                    <Setter Property="Foreground" Value="{StaticResource Brush.TextFainter}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="Text.TargetLabel" TargetType="TextBlock" BasedOn="{StaticResource Text.Mono}">
+            <Setter Property="Foreground" Value="{StaticResource Brush.TextDim}" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsDerived}" Value="True">
+                    <Setter Property="Foreground" Value="{StaticResource Brush.TextFainter}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- How wide the gap is, signed: the bar grows out of the centre mark, left
+             for below the baseline and right for above. -->
+        <Style x:Key="Bar.Gap" TargetType="ProgressBar">
+            <Setter Property="Minimum" Value="0" />
+            <Setter Property="Maximum" Value="100" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Foreground" Value="{StaticResource Brush.Accent}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ProgressBar">
+                        <Grid>
+                            <Rectangle x:Name="PART_Track" />
+                            <Rectangle x:Name="PART_Indicator"
+                                       HorizontalAlignment="Left"
+                                       Fill="{TemplateBinding Foreground}"
+                                       RadiusX="1.5" RadiusY="1.5" />
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsDerived}" Value="True">
+                    <Setter Property="Foreground" Value="{StaticResource Brush.TextFainter}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <DataTemplate x:Key="Ratio.Card" DataType="{x:Type vm:RatioReadingViewModel}">
+            <Border Style="{StaticResource Panel.Card}">
+                <StackPanel>
+                    <Grid>
+                        <TextBlock Style="{StaticResource Text.RatioLabel}" Text="{Binding Label}" />
+                        <TextBlock Style="{StaticResource Text.Delta}"
+                                   HorizontalAlignment="Right" VerticalAlignment="Center"
+                                   Text="{Binding Delta.Text}" />
+                    </Grid>
+                    <TextBlock Style="{StaticResource Text.RatioValue}" Margin="0,10,0,0"
+                               Text="{Binding Formatted}" />
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+
+        <!-- Shown only while a search runs, and indeterminate on purpose: the panel
+             says that the optimizer is working, not how far along it is. -->
+        <Style x:Key="Progress.Sweep" TargetType="ProgressBar">
+            <Setter Property="Height" Value="4" />
+            <Setter Property="Margin" Value="0,10,0,0" />
+            <Setter Property="IsIndeterminate" Value="True" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Background" Value="{StaticResource Brush.Field}" />
+            <Setter Property="Foreground" Value="{StaticResource Brush.Accent}" />
+        </Style>
+    </UserControl.Resources>
+
+    <ScrollViewer Style="{StaticResource Scroll.Column}" Padding="24,20,24,24">
+        <StackPanel>
+
+            <!-- Extrapolation is announced, never silently corrected: outside the
+                 fitted region the regression has nothing to say, and only the
+                 operator can decide whether the number is still worth reading. -->
+            <Border BorderBrush="{StaticResource Brush.Warning}"
+                    BorderThickness="3,1,1,1"
+                    CornerRadius="4"
+                    Background="{StaticResource Brush.WarningWash}"
+                    Padding="16,12"
+                    Margin="0,0,0,18"
+                    Visibility="{Binding HasOutOfRangeInputs, Converter={StaticResource BooleanToVisibility}}">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Style="{StaticResource Text.MonoStrong}"
+                               VerticalAlignment="Center"
+                               Foreground="{StaticResource Brush.Warning}"
+                               Text="⚠" />
+                    <TextBlock Style="{StaticResource Text.Base}"
+                               Margin="12,0,0,0" VerticalAlignment="Center" TextWrapping="Wrap"
+                               Foreground="{StaticResource Brush.WarningText}"
+                               Text="Значение вне диапазона данных обучения. Результат показан как экстраполяция — модель за границами области ничего не утверждает." />
+                </StackPanel>
+            </Border>
+
+            <!-- The ratios lead: they describe the shape of the gas flow, which is
+                 what the charge program steers.
+
+                 Laid out on the same gutters as the two panels below rather than as a
+                 uniform grid: a per-card margin would leave one gutter hanging off the
+                 right edge, and the two rows would no longer line up. -->
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="18" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="18" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <ContentControl Grid.Column="0" HorizontalContentAlignment="Stretch"
+                                Content="{Binding Ratios[0]}"
+                                ContentTemplate="{StaticResource Ratio.Card}" />
+                <ContentControl Grid.Column="2" HorizontalContentAlignment="Stretch"
+                                Content="{Binding Ratios[1]}"
+                                ContentTemplate="{StaticResource Ratio.Card}" />
+                <ContentControl Grid.Column="4" HorizontalContentAlignment="Stretch"
+                                Content="{Binding Ratios[2]}"
+                                ContentTemplate="{StaticResource Ratio.Card}" />
+            </Grid>
+
+            <Grid Margin="0,18,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="18" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <Border Grid.Column="0" Style="{StaticResource Panel.Card}">
+                    <!-- Header and legend take what they need; the plot takes the rest,
+                         so the card has no dead space under it however tall the row is. -->
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Top" Style="{StaticResource Text.SectionHeader}"
+                                   Text="РАДИАЛЬНЫЙ ПРОФИЛЬ" />
+                        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="0,10,0,0">
+                            <TextBlock Style="{StaticResource Text.Mono}"
+                                       Foreground="{StaticResource Brush.Zone.Center}" Text="— расчёт" />
+                            <TextBlock Style="{StaticResource Text.Mono}" Margin="20,0,0,0" Text="- - база" />
+                        </StackPanel>
+                        <controls:RadialProfileChart Margin="0,14,0,0"
+                                                     Profile="{Binding Profile}"
+                                                     Baseline="{Binding BaselineProfile}" />
+                    </DockPanel>
+                </Border>
+
+                <Border Grid.Column="2" Style="{StaticResource Panel.Card}">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Top" Style="{StaticResource Text.SectionHeader}"
+                                   Text="КОЛОШНИК СВЕРХУ" />
+                        <Grid Margin="0,12,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="18" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <controls:FurnaceHeatmap Grid.Column="0"
+                                                     Width="150" Height="150"
+                                                     VerticalAlignment="Center"
+                                                     Profile="{Binding Profile}" />
+
+                            <ItemsControl Grid.Column="2" VerticalAlignment="Center" ItemsSource="{Binding Zones}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type vm:TemperatureZoneViewModel}">
+                                        <Border BorderBrush="{StaticResource Brush.Border}"
+                                                BorderThickness="0,1,0,0" Padding="0,11">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="3" />
+                                                    <ColumnDefinition Width="12" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+
+                                                <Border Grid.Column="0" CornerRadius="2">
+                                                    <Border.Style>
+                                                        <Style TargetType="Border">
+                                                            <Setter Property="Background" Value="{StaticResource Brush.Zone.Center}" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding Position}" Value="OreRidge">
+                                                                    <Setter Property="Background" Value="{StaticResource Brush.Zone.OreRidge}" />
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding Position}" Value="Periphery">
+                                                                    <Setter Property="Background" Value="{StaticResource Brush.Zone.Periphery}" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+                                                </Border>
+
+                                                <StackPanel Grid.Column="2">
+                                                    <TextBlock Style="{StaticResource Text.Mono}"
+                                                               FontFamily="{StaticResource Font.Sans}"
+                                                               Foreground="{StaticResource Brush.TextDim}"
+                                                               TextWrapping="Wrap"
+                                                               Text="{Binding DisplayName}" />
+                                                    <!-- The delta gets its own line and keeps it, empty or not:
+                                                         a row that only appears once a baseline exists would
+                                                         resize this panel, and the chart beside it, on save. -->
+                                                    <TextBlock Style="{StaticResource Text.ZoneValue}"
+                                                               Margin="0,4,0,0"
+                                                               Text="{Binding Formatted}" />
+                                                    <TextBlock Style="{StaticResource Text.DeltaLine}"
+                                                               Margin="0,3,0,0"
+                                                               Text="{Binding Delta.Text}" />
+                                                </StackPanel>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Grid>
+                    </DockPanel>
+                </Border>
+            </Grid>
+
+            <Border Style="{StaticResource Panel.Card}" Margin="0,18,0,0">
+                <StackPanel>
+                    <Grid>
+                        <TextBlock Style="{StaticResource Text.SectionHeader}" Text="ОПТИМИЗАЦИЯ" />
+                        <TextBlock Style="{StaticResource Text.Mono}"
+                                   HorizontalAlignment="Right" VerticalAlignment="Center"
+                                   Text="{Binding Optimization.PairCaption}" />
+                    </Grid>
+
+                    <Grid Margin="0,18,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="20" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <ItemsControl Grid.Column="0" VerticalAlignment="Center"
+                                      ItemsSource="{Binding Optimization.Targets}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <UniformGrid Rows="1" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type vm:OptimizationTargetViewModel}">
+                                    <Border Background="{StaticResource Brush.Field}"
+                                            CornerRadius="4" Padding="14,10,14,12" Margin="0,0,12,0">
+                                        <StackPanel>
+                                            <TextBlock Style="{StaticResource Text.TargetLabel}"
+                                                       Text="{Binding Label}" />
+                                            <TextBlock Style="{StaticResource Text.TargetValueActive}"
+                                                       Margin="0,6,0,0"
+                                                       ToolTip="{Binding DetailedDifference}"
+                                                       Text="{Binding Formatted}" />
+
+                                            <Grid Height="3" Margin="0,10,0,0">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+
+                                                <Border Grid.ColumnSpan="2" CornerRadius="1.5"
+                                                        Background="{StaticResource Brush.Panel}" />
+
+                                                <!-- Mirrored, so it grows out of the middle. -->
+                                                <ProgressBar Grid.Column="0"
+                                                             Style="{StaticResource Bar.Gap}"
+                                                             FlowDirection="RightToLeft"
+                                                             Value="{Binding BelowMagnitude, Mode=OneWay}" />
+                                                <ProgressBar Grid.Column="1"
+                                                             Style="{StaticResource Bar.Gap}"
+                                                             Value="{Binding AboveMagnitude, Mode=OneWay}" />
+
+                                                <Rectangle Grid.Column="1" Width="1"
+                                                           HorizontalAlignment="Left"
+                                                           Fill="{StaticResource Brush.BorderStrong}" />
+                                            </Grid>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <Button Grid.Column="2" Style="{StaticResource Button.Outline}"
+                                VerticalAlignment="Center"
+                                Command="{Binding Optimization.RunCommand}"
+                                Content="{Binding Optimization.ButtonCaption}" />
+                    </Grid>
+
+                    <ProgressBar Style="{StaticResource Progress.Sweep}"
+                                 Visibility="{Binding Optimization.IsRunning, Converter={StaticResource BooleanToVisibility}}" />
+
+                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                        <TextBlock Style="{StaticResource Text.Mono}" VerticalAlignment="Center" Text="F"
+                                   ToolTip="{Binding ToolTip, ElementName=MutationWeightInput}" />
+                        <TextBox x:Name="MutationWeightInput"
+                                 Style="{StaticResource Input.Numeric}" Margin="6,0,0,0"
+                                 ToolTip="F — масштаб изменения пробных вариантов.&#10;Большее значение увеличивает поисковые шаги, меньшее — уменьшает.&#10;Значение по умолчанию: 0,600.">
+                            <TextBox.Text>
+                                <MultiBinding Converter="{StaticResource ParameterValue}"
+                                              UpdateSourceTrigger="LostFocus">
+                                    <Binding Path="Optimization.MutationWeight" Mode="TwoWay" />
+                                    <Binding Path="Optimization.SearchSettingDecimals" Mode="OneWay" />
+                                </MultiBinding>
+                            </TextBox.Text>
+                        </TextBox>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

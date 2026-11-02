@@ -1,0 +1,7 @@
+# The Domain project is the shared, dependency-free reference surface for the
+# whole solution: every other project binds to these types. XML documentation is
+# required here, and only here.
+[*.cs]
+dotnet_diagnostic.SA1600.severity = warning
+dotnet_diagnostic.SA1602.severity = warning
+dotnet_diagnostic.CS1591.severity = warning

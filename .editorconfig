@@ -1,0 +1,66 @@
+# Configure StyleCop / Roslynator rules here only.
+[*.cs]
+
+# SA1633: File should have header — no licence headers in this repository.
+dotnet_diagnostic.SA1633.severity = none
+
+# SA1200: Using directives should be placed correctly (inside namespace).
+# File-scoped namespaces make the "inside" form unreadable; usings stay on top.
+dotnet_diagnostic.SA1200.severity = none
+
+# SA1309 / SX1309: private fields are named _camelCase in this repository.
+dotnet_diagnostic.SA1309.severity = none
+dotnet_diagnostic.SX1309.severity = warning
+
+# SA1313: false positive on record positional parameters, where PascalCase is
+# the correct C# convention.
+dotnet_diagnostic.SA1313.severity = none
+
+# SA1101: Prefix local calls with "this" — noise.
+dotnet_diagnostic.SA1101.severity = none
+
+# SA1010 / SA1011: conflict with collection expressions and nullable array syntax.
+dotnet_diagnostic.SA1010.severity = none
+dotnet_diagnostic.SA1011.severity = none
+
+# IDE0005: unused using directives are dead weight — fail on them.
+dotnet_diagnostic.IDE0005.severity = error
+
+# Documentation rules are enforced only on the public Domain surface — see
+# src/Domna.Domain/.editorconfig, which re-enables them there. Implementation,
+# UI and test code is not required to carry XML docs.
+dotnet_diagnostic.SA1600.severity = none
+dotnet_diagnostic.SA1601.severity = none
+dotnet_diagnostic.SA1602.severity = none
+dotnet_diagnostic.SA1611.severity = none
+dotnet_diagnostic.SA1615.severity = none
+dotnet_diagnostic.SA1618.severity = none
+dotnet_diagnostic.SA1623.severity = none
+dotnet_diagnostic.SA1629.severity = none
+dotnet_diagnostic.CS1591.severity = none
+dotnet_diagnostic.CS1573.severity = none
+
+# SA1116/SA1117 keep multi-line argument lists honest; the long regression
+# expansions in Domna.Calculation are formatted one term per line to stay
+# diffable against the C++ source, which those rules already allow.
+
+[*]
+indent_size = 4
+indent_style = space
+end_of_line = crlf
+insert_final_newline = true
+
+[*.xaml]
+indent_size = 4
+insert_final_newline = false
+
+[*.csproj]
+indent_size = 2
+insert_final_newline = false
+
+[*.{xml,props,targets}]
+indent_size = 2
+insert_final_newline = false
+
+[*.md]
+indent_size = 2

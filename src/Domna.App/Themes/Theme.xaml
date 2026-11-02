@@ -1,0 +1,16 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- The whole theme. It loads as a chain — Palette, then Typography, then
+         Controls — because a StaticResource in one merged dictionary cannot see a
+         sibling's keys; each file therefore merges what it references, and this is
+         the single entry point the application binds to.
+
+         Geometry and colour live in that chain and nowhere else: a screen arranges
+         these styles, it does not invent its own spacing or palette. -->
+
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="Controls.xaml" />
+    </ResourceDictionary.MergedDictionaries>
+
+</ResourceDictionary>

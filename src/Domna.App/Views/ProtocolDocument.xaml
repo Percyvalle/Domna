@@ -1,0 +1,76 @@
+<UserControl x:Class="Domna.App.Views.ProtocolDocument"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:Domna.UI.ViewModels;assembly=Domna.UI.ViewModels"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=vm:ProtocolViewModel}">
+
+    <!-- The protocol itself and nothing else: no scrim, no scrolling, no buttons.
+         This is what goes on paper, so it is also exactly what is shown on screen —
+         the operator signs the sheet they were looking at. -->
+
+    <StackPanel>
+        <Border BorderBrush="{StaticResource Brush.Ink}" BorderThickness="0,0,0,2" Padding="0,0,0,12">
+            <Grid>
+                <TextBlock Style="{StaticResource Text.PaperTitle}" Text="Протокол расчёта колошника" />
+                <TextBlock Style="{StaticResource Text.PaperCaption}"
+                           HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                           FontFamily="{StaticResource Font.Mono}"
+                           Text="{Binding Stamp}" />
+            </Grid>
+        </Border>
+
+        <ItemsControl Margin="0,20,0,0" ItemsSource="{Binding Rows}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Border BorderBrush="{StaticResource Brush.Rule}" BorderThickness="0,0,0,1" Padding="0,7">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="62" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Style="{StaticResource Text.Paper}" Text="{Binding Name}" />
+                            <TextBlock Grid.Column="1" Style="{StaticResource Text.PaperMono}"
+                                       TextAlignment="Right" Text="{Binding Value}" />
+                            <TextBlock Grid.Column="2" Style="{StaticResource Text.PaperCaption}"
+                                       Margin="10,0,0,0" Text="{Binding Unit}" />
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <ItemsControl Margin="0,24,0,0" ItemsSource="{Binding Readings}">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <UniformGrid Rows="1" />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel Margin="0,0,20,0">
+                        <TextBlock Style="{StaticResource Text.PaperCaption}" TextWrapping="Wrap"
+                                   Text="{Binding Name}" />
+                        <TextBlock Style="{StaticResource Text.PaperReading}" Margin="0,4,0,0"
+                                   Text="{Binding Value}" />
+                    </StackPanel>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <Border Margin="0,20,0,0" Padding="0,14,0,0"
+                BorderBrush="{StaticResource Brush.Rule}" BorderThickness="0,1,0,0">
+            <StackPanel>
+                <TextBlock Style="{StaticResource Text.PaperCaption}"
+                           FontFamily="{StaticResource Font.Mono}"
+                           Text="{Binding RatiosCaption}" />
+                <TextBlock Style="{StaticResource Text.PaperCaption}" Margin="0,6,0,0"
+                           FontFamily="{StaticResource Font.Mono}" TextWrapping="Wrap"
+                           Text="{Binding RegionCaption}" />
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</UserControl>

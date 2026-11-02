@@ -1,0 +1,11 @@
+# Test-project conventions.
+[*.cs]
+
+# CA1707: underscores in member names. Test names are sentences —
+# Method_DoesTheThing — and read far better than the run-on alternative.
+dotnet_diagnostic.CA1707.severity = none
+
+# SA1204: static members before non-static. A [MemberData] source has to be
+# public static, but it belongs next to the theory it feeds, not above the
+# tests at the top of the file.
+dotnet_diagnostic.SA1204.severity = none

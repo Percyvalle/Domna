@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Domna.Calculation\Domna.Calculation.csproj" />
+    <ProjectReference Include="..\Domna.Domain\Domna.Domain.csproj" />
+    <ProjectReference Include="..\Domna.UI.ViewModels\Domna.UI.ViewModels.csproj" />
+  </ItemGroup>
+
+</Project>

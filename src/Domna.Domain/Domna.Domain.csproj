@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Dependency-free leaf: the vocabulary every other project binds to.
+       It must never gain a package or project reference. -->
+
+</Project>

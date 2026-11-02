@@ -1,0 +1,79 @@
+# ── Build output ────────────────────────────────────────────────
+/Build/
+[Bb]in/
+[Oo]bj/
+[Oo]ut/
+[Ll]og/
+[Ll]ogs/
+artifacts/
+
+# ── .NET / Visual Studio ────────────────────────────────────────
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.userprefs
+project.lock.json
+project.fragment.lock.json
+
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+
+# Publish output
+publish/
+*.publishsettings
+
+# MSTest / coverage
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+*.coverage
+*.coveragexml
+coverage*.json
+coverage*.xml
+coverage*.info
+TestResults/
+
+# NuGet
+*.nupkg
+*.snupkg
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+*.nuget.props
+*.nuget.targets
+
+# ── Rider / JetBrains ───────────────────────────────────────────
+.idea/
+*.sln.iml
+
+# ── OS noise ────────────────────────────────────────────────────
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+
+# ── Machine-local overrides ─────────────────────────────────────
+# Any file with a ".local." infix or ".local" suffix is a machine-local
+# override — kept on disk, never committed.
+**/*.local.*
+**/*.local
+
+# ── Local-only agent planning docs ──────────────────────────────
+# Files prefixed "_local." are working notes/plans kept on disk for agents to
+# read, but intentionally never committed. See AGENTS.md "Local-only planning docs".
+**/_local.*
+
+# ── Claude Code local config ────────────────────────────────────
+# Machine-local Claude Code working files. Shared skills are tracked.
+.claude/*
+!.claude/skills/

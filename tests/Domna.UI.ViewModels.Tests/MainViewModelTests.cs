@@ -1,3 +1,4 @@
+using Domna.Calculation;
 using Domna.Domain.Models;
 using Domna.Domain.Parameters;
 
@@ -15,7 +16,7 @@ public class MainViewModelTests
     private readonly MainViewModel _screen;
 
     public MainViewModelTests() =>
-        _screen = new MainViewModel(_calculator, _optimizer, _export, new FixedTimeProvider(Noon));
+        _screen = new MainViewModel(_calculator, new ChargeProgramCalculator(), _optimizer, _export, new FixedTimeProvider(Noon));
 
     [Fact]
     public void BeforeTheFirstCalculation_ThereIsNoResultToRead()
@@ -305,12 +306,12 @@ public class MainViewModelTests
     [Fact]
     public void FreeParametersCaption_CountsWhatTheOptimizerMayMove()
     {
-        Assert.Equal("свободных: 0 / 11", _screen.FreeParametersCaption);
+        Assert.Equal("свободных: 0 / 8", _screen.FreeParametersCaption);
 
         _screen.Inputs[0].IsFree = true;
         _screen.Inputs[3].IsFree = true;
 
-        Assert.Equal("свободных: 2 / 11", _screen.FreeParametersCaption);
+        Assert.Equal("свободных: 2 / 8", _screen.FreeParametersCaption);
     }
 
     [Fact]

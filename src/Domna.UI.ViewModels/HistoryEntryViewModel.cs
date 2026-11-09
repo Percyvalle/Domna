@@ -30,7 +30,8 @@ public sealed partial class HistoryEntryViewModel : ObservableObject
         TemperatureProfile profile,
         Action<HistoryEntryViewModel> onLoad,
         Action<HistoryEntryViewModel> onCompare,
-        Action<HistoryEntryViewModel> onDelete)
+        Action<HistoryEntryViewModel> onDelete,
+        ChargeProgram? chargeProgram = null)
     {
         ArgumentNullException.ThrowIfNull(onLoad);
         ArgumentNullException.ThrowIfNull(onCompare);
@@ -40,6 +41,7 @@ public sealed partial class HistoryEntryViewModel : ObservableObject
         SavedAt = savedAt;
         Parameters = parameters;
         Profile = profile;
+        ChargeProgram = chargeProgram;
         _onLoad = onLoad;
         _onCompare = onCompare;
         _onDelete = onDelete;
@@ -58,6 +60,8 @@ public sealed partial class HistoryEntryViewModel : ObservableObject
     public ParameterSet Parameters { get; }
 
     public TemperatureProfile Profile { get; }
+
+    public ChargeProgram? ChargeProgram { get; }
 
     public string Center => DisplayNumber.Fixed(Profile.Center, DisplayNumber.TemperatureDecimals);
 

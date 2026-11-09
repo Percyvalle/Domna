@@ -37,6 +37,24 @@ in exactly this order, and `ParameterCatalog` carries the bounds.
 "Stations 3-5 / 6-8 / 9-11" are the distributor positions the charge is dropped
 at, grouped into peripheral, intermediate and central rings.
 
+### Calculating the three station inputs
+
+In the charge matrix, a row is one coke or ore drop. A column gives the number
+of portions delivered at that station. The manual editor accepts nonnegative
+integer counts and reads empty cells as zero.
+
+For each of the three station groups, the workbook's `Лист2` first normalizes
+the group's ore and coke totals separately, using each material's total over
+all eleven stations. If `r` and `c` are the resulting fractions, the regression
+input is `100 × r / (r + c)`. Stations 1 and 2 contribute to the totals used for
+normalization. All three inputs require both materials somewhere in the
+program and at least one portion in each group.
+
+Applying a matrix updates these read-only inputs in the dashboard at full
+precision. The next profile calculation uses the resulting values and the
+existing fitted bounds. Until a matrix is entered, the dashboard displays the
+catalogue defaults. A saved calculation includes its charge program.
+
 ## What the model computes
 
 Three quantities are fitted directly, each a polynomial in the parameters above:
@@ -117,7 +135,10 @@ Four properties are load-bearing:
 
 Only the parameters the operator marks free are moved; the rest stay pinned,
 because in the shop most of the eleven are not the operator's to change on the
-day. The search performs four independent DE/rand/1/bin rounds, each initialized
+day. The dashboard keeps the three matrix-derived inputs fixed during search.
+The station-sum constraint above describes the numeric optimizer interface,
+which can still be exercised independently of the dashboard. The search
+performs four independent DE/rand/1/bin rounds, each initialized
 uniformly over the complete normalized box and retaining the starting point.
 Each round runs 90 generations with the requested F and CR settings. It does not
 shrink subsequent populations around a previous round's winner.

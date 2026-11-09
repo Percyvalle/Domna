@@ -1,4 +1,5 @@
 using System.Globalization;
+using Domna.Calculation;
 using Domna.Domain.Parameters;
 
 namespace Domna.UI.ViewModels.Tests;
@@ -10,7 +11,7 @@ public class HistoryTableTests
     private static readonly CultureInfo American = CultureInfo.GetCultureInfo("en-US");
 
     private readonly MainViewModel _screen =
-        new(new StubCalculator(), new StubOptimizer(), new RecordingExportTarget(), new FixedTimeProvider(Noon));
+        new(new StubCalculator(), new ChargeProgramCalculator(), new StubOptimizer(), new RecordingExportTarget(), new FixedTimeProvider(Noon));
 
     [Fact]
     public void AnEmptyHistory_StillCarriesItsHeader()

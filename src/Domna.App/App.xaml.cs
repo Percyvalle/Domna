@@ -23,12 +23,13 @@ public partial class App : Application
         // The one place an implementation is chosen. Both view-model layers see
         // interfaces only, which is what keeps them testable without a UI thread.
         ITemperatureProfileCalculator calculator = new TemperatureProfileCalculator();
+        IChargeProgramCalculator chargeProgramCalculator = new ChargeProgramCalculator();
         IParameterOptimizer optimizer = new DifferentialEvolutionOptimizer(calculator);
 
         MainWindow window = new()
         {
             DataContext = new MainViewModel(
-                calculator, optimizer, new HistoryExportFile(), TimeProvider.System),
+                calculator, chargeProgramCalculator, optimizer, new HistoryExportFile(), TimeProvider.System),
         };
 
         window.Show();

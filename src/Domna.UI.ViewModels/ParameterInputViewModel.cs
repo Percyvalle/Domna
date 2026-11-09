@@ -52,6 +52,15 @@ public sealed partial class ParameterInputViewModel : ObservableObject
 
     public Parameter Parameter { get; }
 
+    public bool IsCalculated => Parameter is
+        Parameter.ChargeStations9To11 or Parameter.ChargeStations6To8 or Parameter.ChargeStations3To5;
+
+    public bool CanOptimize => !IsCalculated;
+
+    public string? CalculatedValueDetail => IsCalculated
+        ? string.Create(CultureInfo.CurrentCulture, $"Точное значение: {Value:G} {Unit}")
+        : null;
+
     public string DisplayName { get; }
 
     public string ShortName { get; }
@@ -100,6 +109,7 @@ public sealed partial class ParameterInputViewModel : ObservableObject
     {
         ClearOptimizerChange();
         OnPropertyChanged(nameof(IsOutOfRange));
+        OnPropertyChanged(nameof(CalculatedValueDetail));
         _onValueChanged();
     }
 

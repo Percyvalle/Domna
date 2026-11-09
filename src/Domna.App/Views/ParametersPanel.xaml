@@ -32,6 +32,85 @@
             </Style.Triggers>
         </Style>
 
+        <Style x:Key="Text.ParameterName" TargetType="TextBlock" BasedOn="{StaticResource Text.Label}">
+            <Setter Property="Text" Value="{Binding DisplayName}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsCalculated}" Value="True">
+                    <Setter Property="Text" Value="{Binding ShortName}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <DataTemplate x:Key="ParameterRow" DataType="{x:Type vm:ParameterInputViewModel}">
+            <Border Style="{StaticResource ParameterRow.Container}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="28" />
+                        <ColumnDefinition Width="104" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0" Style="{StaticResource ParameterRow.LabelAndRange}">
+                        <TextBlock Style="{StaticResource Text.ParameterName}"
+                                   ToolTip="{Binding DisplayName}" />
+                        <StackPanel Style="{StaticResource ParameterRow.Range}">
+                            <TextBox Style="{StaticResource Input.BoundsEditable}">
+                                <TextBox.Text>
+                                    <MultiBinding Converter="{StaticResource ParameterValue}"
+                                                  UpdateSourceTrigger="LostFocus">
+                                        <Binding Path="EffectiveMinimum" Mode="TwoWay" />
+                                        <Binding Path="Range.Decimals" Mode="OneWay" />
+                                    </MultiBinding>
+                                </TextBox.Text>
+                            </TextBox>
+                            <TextBlock Style="{StaticResource Text.RangeCaption}" Text=" – " />
+                            <TextBox Style="{StaticResource Input.BoundsEditable}">
+                                <TextBox.Text>
+                                    <MultiBinding Converter="{StaticResource ParameterValue}"
+                                                  UpdateSourceTrigger="LostFocus">
+                                        <Binding Path="EffectiveMaximum" Mode="TwoWay" />
+                                        <Binding Path="Range.Decimals" Mode="OneWay" />
+                                    </MultiBinding>
+                                </TextBox.Text>
+                            </TextBox>
+                            <TextBlock Style="{StaticResource Text.Mono}" Margin="10,0,0,0"
+                                       Foreground="{StaticResource Brush.TextFainter}"
+                                       Text="{Binding Unit}" />
+                        </StackPanel>
+                    </StackPanel>
+
+                    <CheckBox Grid.Column="1"
+                              Style="{StaticResource Toggle.FreeParameter}"
+                              HorizontalAlignment="Left" VerticalAlignment="Center"
+                              Visibility="{Binding CanOptimize, Converter={StaticResource BooleanToVisibility}}"
+                              IsChecked="{Binding IsFree}" />
+
+                    <TextBox Grid.Column="2"
+                             Style="{StaticResource Input.NumericValidated}"
+                             IsReadOnly="{Binding IsCalculated}"
+                             ToolTip="{Binding CalculatedValueDetail}"
+                             VerticalAlignment="Center">
+                        <TextBox.Text>
+                            <MultiBinding Converter="{StaticResource ParameterValue}"
+                                          UpdateSourceTrigger="LostFocus">
+                                <Binding Path="Value" Mode="TwoWay" />
+                                <Binding Path="Range.Decimals" Mode="OneWay" />
+                            </MultiBinding>
+                        </TextBox.Text>
+                    </TextBox>
+
+                    <TextBlock Grid.Row="1" Grid.ColumnSpan="3"
+                               Style="{StaticResource Text.OptimizerChange}"
+                               Text="{Binding OptimizerChange}"
+                               ToolTip="{Binding OptimizerChangeDetail}" />
+                </Grid>
+            </Border>
+        </DataTemplate>
     </UserControl.Resources>
 
     <DockPanel>
@@ -62,79 +141,25 @@
         </Border>
 
         <ScrollViewer Style="{StaticResource Scroll.Column}" Padding="24,0,24,8">
-            <ItemsControl ItemsSource="{Binding Inputs}">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate DataType="{x:Type vm:ParameterInputViewModel}">
-                        <Border BorderBrush="{StaticResource Brush.BorderSoft}"
-                                BorderThickness="0,0,0,1"
-                                Padding="0,6">
-                            <Grid>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                </Grid.RowDefinitions>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="28" />
-                                    <ColumnDefinition Width="104" />
-                                </Grid.ColumnDefinitions>
+            <StackPanel>
+                <ItemsControl ItemsSource="{Binding ProcessInputs}" ItemTemplate="{StaticResource ParameterRow}" />
 
-                                <StackPanel Grid.Column="0" Margin="0,0,10,0" VerticalAlignment="Center">
-                                    <TextBlock Style="{StaticResource Text.Label}"
-                                               Text="{Binding DisplayName}"
-                                               ToolTip="{Binding DisplayName}" />
-                                    <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
-                                        <TextBox Style="{StaticResource Input.BoundsEditable}">
-                                            <TextBox.Text>
-                                                <MultiBinding Converter="{StaticResource ParameterValue}"
-                                                              UpdateSourceTrigger="LostFocus">
-                                                    <Binding Path="EffectiveMinimum" Mode="TwoWay" />
-                                                    <Binding Path="Range.Decimals" Mode="OneWay" />
-                                                </MultiBinding>
-                                            </TextBox.Text>
-                                        </TextBox>
-                                        <TextBlock Style="{StaticResource Text.RangeCaption}" Text=" – " />
-                                        <TextBox Style="{StaticResource Input.BoundsEditable}">
-                                            <TextBox.Text>
-                                                <MultiBinding Converter="{StaticResource ParameterValue}"
-                                                              UpdateSourceTrigger="LostFocus">
-                                                    <Binding Path="EffectiveMaximum" Mode="TwoWay" />
-                                                    <Binding Path="Range.Decimals" Mode="OneWay" />
-                                                </MultiBinding>
-                                            </TextBox.Text>
-                                        </TextBox>
-                                        <TextBlock Style="{StaticResource Text.Mono}" Margin="10,0,0,0"
-                                                   Foreground="{StaticResource Brush.TextFainter}"
-                                                   Text="{Binding Unit}" />
-                                    </StackPanel>
-                                </StackPanel>
-
-                                <CheckBox Grid.Column="1"
-                                          Style="{StaticResource Toggle.FreeParameter}"
-                                          HorizontalAlignment="Left" VerticalAlignment="Center"
-                                          IsChecked="{Binding IsFree}" />
-
-                                <TextBox Grid.Column="2"
-                                         Style="{StaticResource Input.NumericValidated}"
-                                         VerticalAlignment="Center">
-                                    <TextBox.Text>
-                                        <MultiBinding Converter="{StaticResource ParameterValue}"
-                                                      UpdateSourceTrigger="LostFocus">
-                                            <Binding Path="Value" Mode="TwoWay" />
-                                            <Binding Path="Range.Decimals" Mode="OneWay" />
-                                        </MultiBinding>
-                                    </TextBox.Text>
-                                </TextBox>
-
-                                <TextBlock Grid.Row="1" Grid.ColumnSpan="3"
-                                           Style="{StaticResource Text.OptimizerChange}"
-                                           Text="{Binding OptimizerChange}"
-                                           ToolTip="{Binding OptimizerChangeDetail}" />
-                            </Grid>
-                        </Border>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
+                <Border Style="{StaticResource ChargeProgram.Section}">
+                    <DockPanel>
+                        <DockPanel DockPanel.Dock="Top" Style="{StaticResource ChargeProgram.SectionHeader}">
+                            <Button DockPanel.Dock="Right" VerticalAlignment="Center"
+                                    Style="{StaticResource ChargeProgram.ShortcutButton}"
+                                    Click="OpenChargeProgram"
+                                    Content="Матрица загрузки" />
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Style="{StaticResource Text.ColumnHeader}" Text="Зоны загрузки" />
+                                <TextBlock Style="{StaticResource ChargeProgram.Status}" Text="{Binding ChargeProgramCaption}" />
+                            </StackPanel>
+                        </DockPanel>
+                        <ItemsControl ItemsSource="{Binding StationInputs}" ItemTemplate="{StaticResource ParameterRow}" />
+                    </DockPanel>
+                </Border>
+            </StackPanel>
         </ScrollViewer>
     </DockPanel>
 </UserControl>

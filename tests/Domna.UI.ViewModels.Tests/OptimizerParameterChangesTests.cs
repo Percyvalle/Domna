@@ -1,4 +1,5 @@
 using System.Globalization;
+using Domna.Calculation;
 using Domna.Domain.Models;
 using Domna.Domain.Parameters;
 
@@ -14,15 +15,16 @@ public class OptimizerParameterChangesTests
         CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("ru-RU");
         _screen = new MainViewModel(
             new StubCalculator(),
+            new ChargeProgramCalculator(),
             _optimizer,
             new RecordingExportTarget(),
             new FixedTimeProvider(new DateTimeOffset(2026, 9, 2, 12, 34, 56, TimeSpan.Zero)));
         _screen.SaveSnapshot();
-        Input(Parameter.ChargeStations9To11).IsFree = true;
-        Input(Parameter.ChargeStations6To8).IsFree = true;
+        Input(Parameter.BurdenLevel).IsFree = true;
+        Input(Parameter.CokeSize).IsFree = true;
         _optimizer.Answer = ParameterSet.Defaults
-            .With(Parameter.ChargeStations9To11, 73.0)
-            .With(Parameter.ChargeStations6To8, 52.0);
+            .With(Parameter.BurdenLevel, 1.9)
+            .With(Parameter.CokeSize, 54.0);
     }
 
     [Fact]
@@ -30,9 +32,9 @@ public class OptimizerParameterChangesTests
     {
         await RunOptimizationAsync();
 
-        Assert.Equal(73.0, Input(Parameter.ChargeStations9To11).Value);
-        Assert.Equal("75,0 → 73,0", Input(Parameter.ChargeStations9To11).OptimizerChange);
-        Assert.Equal("50,00 → 52,00", Input(Parameter.ChargeStations6To8).OptimizerChange);
+        Assert.Equal(1.9, Input(Parameter.BurdenLevel).Value);
+        Assert.Equal("1,857 → 1,900", Input(Parameter.BurdenLevel).OptimizerChange);
+        Assert.Equal("53,88 → 54,00", Input(Parameter.CokeSize).OptimizerChange);
         Assert.All(
             _screen.Inputs.Where(input => !input.IsFree),
             input => Assert.Empty(input.OptimizerChange));
@@ -41,12 +43,12 @@ public class OptimizerParameterChangesTests
     [Fact]
     public async Task ComparisonUsesTheSearchStartRatherThanUncommittedEdits()
     {
-        Input(Parameter.ChargeStations9To11).Value = 80.0;
+        Input(Parameter.BurdenLevel).Value = 2.0;
 
         await RunOptimizationAsync();
 
-        Assert.Equal(75.0, _optimizer.LastRequest!.Start[Parameter.ChargeStations9To11]);
-        Assert.Equal("75,0 → 73,0", Input(Parameter.ChargeStations9To11).OptimizerChange);
+        Assert.Equal(1.857, _optimizer.LastRequest!.Start[Parameter.BurdenLevel]);
+        Assert.Equal("1,857 → 1,900", Input(Parameter.BurdenLevel).OptimizerChange);
     }
 
     [Fact]
@@ -54,13 +56,13 @@ public class OptimizerParameterChangesTests
     {
         await RunOptimizationAsync();
         _optimizer.Answer = _optimizer.Answer!
-            .With(Parameter.ChargeStations9To11, 74.0)
-            .With(Parameter.ChargeStations6To8, 51.0);
+            .With(Parameter.BurdenLevel, 2.0)
+            .With(Parameter.CokeSize, 55.0);
 
         await RunOptimizationAsync();
 
-        Assert.Equal("73,0 → 74,0", Input(Parameter.ChargeStations9To11).OptimizerChange);
-        Assert.Equal("52,00 → 51,00", Input(Parameter.ChargeStations6To8).OptimizerChange);
+        Assert.Equal("1,900 → 2,000", Input(Parameter.BurdenLevel).OptimizerChange);
+        Assert.Equal("54,00 → 55,00", Input(Parameter.CokeSize).OptimizerChange);
     }
 
     [Theory]

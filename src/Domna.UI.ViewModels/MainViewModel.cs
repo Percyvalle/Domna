@@ -31,10 +31,13 @@ public sealed partial class MainViewModel : ObservableObject
         "R²(Тц) = 0.854 · R²(Тц/Тгр) = 0.842\nR²(Тпер/Тц) = 0.785 · N = 336";
 
     private readonly ITemperatureProfileCalculator _calculator;
+    private readonly IChargeProgramCalculator _chargeProgramCalculator;
     private readonly IHistoryExportTarget _export;
     private readonly TimeProvider _time;
 
     private ParameterSet? _committed;
+    private ChargeProgram? _chargeProgram;
+    private ChargeProgram? _committedChargeProgram;
     private TemperatureProfile? _profile;
     private HistoryEntryViewModel? _baseline;
     private bool _applyingParameters;
@@ -59,21 +62,26 @@ public sealed partial class MainViewModel : ObservableObject
 
     public MainViewModel(
         ITemperatureProfileCalculator calculator,
+        IChargeProgramCalculator chargeProgramCalculator,
         IParameterOptimizer optimizer,
         IHistoryExportTarget exportTarget,
         TimeProvider timeProvider)
     {
         ArgumentNullException.ThrowIfNull(calculator);
+        ArgumentNullException.ThrowIfNull(chargeProgramCalculator);
         ArgumentNullException.ThrowIfNull(optimizer);
         ArgumentNullException.ThrowIfNull(exportTarget);
         ArgumentNullException.ThrowIfNull(timeProvider);
 
         _calculator = calculator;
+        _chargeProgramCalculator = chargeProgramCalculator;
         _export = exportTarget;
         _time = timeProvider;
 
         Inputs = [.. ParameterLabels.All.Select(
             label => new ParameterInputViewModel(label, OnInputEdited, OnFreeParametersChanged, OnBoundsChanged))];
+        ProcessInputs = [.. Inputs.Where(input => !input.IsCalculated)];
+        StationInputs = [.. Inputs.Where(input => input.IsCalculated)];
 
         // The optimizer panel is owned here rather than injected, because the only
         // thing it can do with an answer is hand it back to this input list.
@@ -83,6 +91,10 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     public ObservableCollection<ParameterInputViewModel> Inputs { get; }
+
+    public IReadOnlyList<ParameterInputViewModel> ProcessInputs { get; }
+
+    public IReadOnlyList<ParameterInputViewModel> StationInputs { get; }
 
     public ObservableCollection<HistoryEntryViewModel> History { get; } = [];
 
@@ -124,9 +136,13 @@ public sealed partial class MainViewModel : ObservableObject
     /// <summary>True while any input sits outside the region the model was fitted in.</summary>
     public bool HasOutOfRangeInputs => Inputs.Any(input => input.IsOutOfRange);
 
+    public string ChargeProgramCaption => _chargeProgram is null
+        ? "Значения по умолчанию"
+        : "Рассчитано по матрице";
+
     public string FreeParametersCaption => string.Create(
         CultureInfo.CurrentCulture,
-        $"свободных: {Inputs.Count(input => input.IsFree)} / {ParameterCatalog.Count}");
+        $"свободных: {Inputs.Count(input => input.CanOptimize && input.IsFree)} / {Inputs.Count(input => input.CanOptimize)}");
 
     public string StatusLine => !HasResult
         ? "Параметры введены, расчёт не запускался — нажмите «Рассчитать»"
@@ -153,6 +169,7 @@ public sealed partial class MainViewModel : ObservableObject
         }
 
         _committed = parameters;
+        _committedChargeProgram = _chargeProgram;
         _profile = profile;
         IsStale = false;
         CalculationErrorDetail = null;
@@ -162,7 +179,9 @@ public sealed partial class MainViewModel : ObservableObject
 
     /// <summary>Returns every parameter to its catalogue default and recalculates.</summary>
     [RelayCommand]
-    public void Reset() => Apply(ParameterSet.Defaults, ClearOptimizerChanges);
+    public void Reset() => Apply(ParameterSet.Defaults, null, ClearOptimizerChanges);
+
+    public ChargeProgramEditorViewModel EditChargeProgram() => new(_chargeProgram, ApplyChargeProgram);
 
     /// <summary>Puts the inputs back where the last successful calculation left them.</summary>
     [RelayCommand]
@@ -172,7 +191,7 @@ public sealed partial class MainViewModel : ObservableObject
 
         if (_committed is { } parameters)
         {
-            Apply(parameters, ClearOptimizerChanges);
+            Apply(parameters, _committedChargeProgram, ClearOptimizerChanges);
         }
     }
 
@@ -199,7 +218,7 @@ public sealed partial class MainViewModel : ObservableObject
         }
 
         HistoryEntryViewModel entry = new(
-            _sequence, _time.GetLocalNow(), parameters, profile, LoadEntry, ToggleBaseline, RemoveEntry);
+            _sequence, _time.GetLocalNow(), parameters, profile, LoadEntry, ToggleBaseline, RemoveEntry, _committedChargeProgram);
         History.Add(entry);
         _sequence++;
 
@@ -310,7 +329,7 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     /// <summary>Writes a parameter set into the input list as one edit, then recalculates.</summary>
-    private void Apply(ParameterSet parameters, Action afterWrite)
+    private void Apply(ParameterSet parameters, ChargeProgram? program, Action afterWrite)
     {
         _applyingParameters = true;
         try
@@ -327,8 +346,32 @@ public sealed partial class MainViewModel : ObservableObject
 
         afterWrite();
 
+        SetChargeProgram(program);
         OnPropertyChanged(nameof(HasOutOfRangeInputs));
         Calculate();
+    }
+
+    private bool ApplyChargeProgram(ChargeProgram program)
+    {
+        if (_chargeProgramCalculator.Calculate(program) is not { } shares)
+        {
+            return false;
+        }
+
+        Inputs[(int)Parameter.ChargeStations9To11].Value = shares.Stations9To11;
+        Inputs[(int)Parameter.ChargeStations6To8].Value = shares.Stations6To8;
+        Inputs[(int)Parameter.ChargeStations3To5].Value = shares.Stations3To5;
+        SetChargeProgram(program);
+        IsStale = true;
+        CalculationErrorDetail = null;
+        RefreshOptimization();
+        return true;
+    }
+
+    private void SetChargeProgram(ChargeProgram? program)
+    {
+        _chargeProgram = program;
+        OnPropertyChanged(nameof(ChargeProgramCaption));
     }
 
     private void ClearOptimizerChanges()
@@ -342,7 +385,12 @@ public sealed partial class MainViewModel : ObservableObject
     /// <summary>Takes the optimizer's answer and shows the transition from its starting values.</summary>
     private void ApplyOptimizerResult(ParameterSet before, ParameterSet found)
     {
-        Apply(found, () =>
+        if (!ReferenceEquals(before, _committed) || !ReferenceEquals(_chargeProgram, _committedChargeProgram))
+        {
+            return;
+        }
+
+        Apply(found, _chargeProgram, () =>
         {
             foreach (ParameterInputViewModel input in Inputs)
             {
@@ -351,7 +399,7 @@ public sealed partial class MainViewModel : ObservableObject
         });
     }
 
-    private void LoadEntry(HistoryEntryViewModel entry) => Apply(entry.Parameters, ClearOptimizerChanges);
+    private void LoadEntry(HistoryEntryViewModel entry) => Apply(entry.Parameters, entry.ChargeProgram, ClearOptimizerChanges);
 
     /// <summary>Drops one saved calculation, and the baseline with it if that is what it was.</summary>
     /// <remarks>
@@ -411,12 +459,13 @@ public sealed partial class MainViewModel : ObservableObject
         RefreshOptimization();
     }
 
-    private void RefreshOptimization() => Optimization.Refresh(
-        _committed ?? CurrentParameters,
-        _profile,
-        BaselineProfile,
-        [.. Inputs.Where(input => input.IsFree).Select(input => input.Parameter)],
-        BaselinePairCaption());
+    private void RefreshOptimization()
+    {
+        Parameter[] free = ReferenceEquals(_chargeProgram, _committedChargeProgram)
+            ? [.. Inputs.Where(input => input.CanOptimize && input.IsFree).Select(input => input.Parameter)]
+            : [];
+        Optimization.Refresh(_committed ?? CurrentParameters, _profile, BaselineProfile, free, BaselinePairCaption());
+    }
 
     private string BaselinePairCaption()
     {

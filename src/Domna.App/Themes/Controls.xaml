@@ -258,6 +258,148 @@
         <Setter Property="HorizontalScrollBarVisibility" Value="Disabled" />
     </Style>
 
+    <Style x:Key="ParameterRow.Container" TargetType="Border">
+        <Setter Property="BorderBrush" Value="{StaticResource Brush.BorderSoft}" />
+        <Setter Property="BorderThickness" Value="0,0,0,1" />
+        <Setter Property="Padding" Value="0,6" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding IsCalculated}" Value="True">
+                <Setter Property="Padding" Value="0,3" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="ParameterRow.LabelAndRange" TargetType="StackPanel">
+        <Setter Property="Margin" Value="0,0,10,0" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding IsCalculated}" Value="True">
+                <Setter Property="Orientation" Value="Horizontal" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="ParameterRow.Range" TargetType="StackPanel">
+        <Setter Property="Orientation" Value="Horizontal" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Margin" Value="0,2,0,0" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding IsCalculated}" Value="True">
+                <Setter Property="Margin" Value="12,0,0,0" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="ChargeProgram.Section" TargetType="Border" BasedOn="{StaticResource Panel.Card}">
+        <Setter Property="Margin" Value="0,10,0,0" />
+        <Setter Property="Padding" Value="12,10,12,4" />
+        <Setter Property="BorderBrush" Value="{StaticResource Brush.BorderStrong}" />
+    </Style>
+
+    <Style x:Key="ChargeProgram.SectionHeader" TargetType="DockPanel">
+        <Setter Property="Margin" Value="0,0,0,4" />
+    </Style>
+
+    <Style x:Key="ChargeProgram.Status" TargetType="TextBlock" BasedOn="{StaticResource Text.Mono}">
+        <Setter Property="Foreground" Value="{StaticResource Brush.TextMuted}" />
+    </Style>
+
+    <Style x:Key="ChargeProgram.ShortcutButton" TargetType="Button" BasedOn="{StaticResource Button.Outline}">
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Padding" Value="12,5" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding Optimization.IsRunning}" Value="True">
+                <Setter Property="IsEnabled" Value="False" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="ChargeProgram.Window" TargetType="Window">
+        <Setter Property="Width" Value="800" />
+        <Setter Property="Height" Value="560" />
+        <Setter Property="MinWidth" Value="700" />
+        <Setter Property="MinHeight" Value="360" />
+        <Setter Property="Background" Value="{StaticResource Brush.Surface}" />
+        <Setter Property="Foreground" Value="{StaticResource Brush.Text}" />
+        <Setter Property="FontFamily" Value="{StaticResource Font.Sans}" />
+    </Style>
+
+    <Style x:Key="ChargeProgram.Content" TargetType="DockPanel">
+        <Setter Property="Margin" Value="24" />
+    </Style>
+
+    <Style x:Key="ChargeProgram.Intro" TargetType="StackPanel">
+        <Setter Property="Margin" Value="0,0,0,12" />
+    </Style>
+
+    <Style x:Key="ChargeProgram.RowActions" TargetType="DockPanel">
+        <Setter Property="Margin" Value="0,0,0,8" />
+    </Style>
+
+    <Style x:Key="ChargeProgram.Actions" TargetType="StackPanel">
+        <Setter Property="Margin" Value="0,12,0,0" />
+    </Style>
+
+    <Style x:Key="ChargeProgram.ActionWithGap" TargetType="Button" BasedOn="{StaticResource Button.Ghost}">
+        <Setter Property="Margin" Value="0,0,8,0" />
+    </Style>
+
+    <Style x:Key="ChargeProgram.Cell" TargetType="DataGridCell">
+        <Style.Triggers>
+            <Trigger Property="IsSelected" Value="True">
+                <Setter Property="Background" Value="{StaticResource Brush.AccentWash}" />
+                <Setter Property="BorderBrush" Value="{StaticResource Brush.BorderStrong}" />
+                <Setter Property="Foreground" Value="{StaticResource Brush.Text}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="ChargeProgram.Grid" TargetType="DataGrid">
+        <Setter Property="CellStyle" Value="{StaticResource ChargeProgram.Cell}" />
+        <Setter Property="Background" Value="{StaticResource Brush.Field}" />
+        <Setter Property="Foreground" Value="{StaticResource Brush.Text}" />
+        <Setter Property="RowBackground" Value="{StaticResource Brush.Field}" />
+        <Setter Property="AlternatingRowBackground" Value="{StaticResource Brush.Column}" />
+        <Setter Property="BorderBrush" Value="{StaticResource Brush.Border}" />
+        <Setter Property="HorizontalGridLinesBrush" Value="{StaticResource Brush.Border}" />
+        <Setter Property="VerticalGridLinesBrush" Value="{StaticResource Brush.Border}" />
+        <Setter Property="FontFamily" Value="{StaticResource Font.Mono}" />
+        <Setter Property="RowHeight" Value="28" />
+        <Setter Property="ColumnWidth" Value="*" />
+    </Style>
+
+    <Style x:Key="ChargeProgram.ColumnHeader" TargetType="DataGridColumnHeader">
+        <Setter Property="Background" Value="{StaticResource Brush.Panel}" />
+        <Setter Property="Foreground" Value="{StaticResource Brush.TextSoft}" />
+        <Setter Property="BorderBrush" Value="{StaticResource Brush.Border}" />
+        <Setter Property="BorderThickness" Value="0,0,1,1" />
+        <Setter Property="Padding" Value="8,6" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+    </Style>
+
+    <Style x:Key="ChargeProgram.CellText" TargetType="TextBlock">
+        <Setter Property="TextAlignment" Value="Center" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <Style x:Key="ChargeProgram.CellEditor" TargetType="TextBox">
+        <Setter Property="TextAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Background" Value="{StaticResource Brush.Panel}" />
+        <Setter Property="Foreground" Value="{StaticResource Brush.TextBright}" />
+        <Setter Property="BorderBrush" Value="{StaticResource Brush.Accent}" />
+    </Style>
+
+    <Style x:Key="ChargeProgram.Error" TargetType="TextBlock" BasedOn="{StaticResource Text.Body}">
+        <Setter Property="Margin" Value="0,8,0,0" />
+        <Setter Property="Foreground" Value="{StaticResource Brush.WarningText}" />
+        <Style.Triggers>
+            <Trigger Property="Text" Value="">
+                <Setter Property="Visibility" Value="Collapsed" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
     <!-- A numeric field that looks like a caption text at rest and shows a border on
          hover and focus. Used wherever a bound or algorithm knob is editable in place. -->
     <Style x:Key="Input.BoundsEditable" TargetType="TextBox">

@@ -1,0 +1,42 @@
+<Window x:Class="Domna.App.Views.ChargeProgramWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Style="{StaticResource ChargeProgram.Window}"
+        WindowStartupLocation="CenterOwner"
+        Title="Матрица загрузки">
+    <DockPanel Style="{StaticResource ChargeProgram.Content}">
+        <StackPanel DockPanel.Dock="Top" Style="{StaticResource ChargeProgram.Intro}">
+            <TextBlock Style="{StaticResource Text.AppTitle}" Text="Матрица загрузки" />
+            <TextBlock Style="{StaticResource Text.Body}"
+                       Text="Добавьте подачу кокса (К) или руды (Р) и укажите число порций по станциям. Пустая ячейка означает ноль." />
+        </StackPanel>
+
+        <DockPanel DockPanel.Dock="Top" Style="{StaticResource ChargeProgram.RowActions}">
+            <StackPanel DockPanel.Dock="Left" Orientation="Horizontal">
+                <Button Style="{StaticResource ChargeProgram.ActionWithGap}" Content="+ Кокс" Command="{Binding AddCokeCommand}"
+                        ToolTip="Добавить кокс после выбранной подачи или в конец списка" />
+                <Button Style="{StaticResource Button.Ghost}" Content="+ Руда" Command="{Binding AddOreCommand}"
+                        ToolTip="Добавить руду после выбранной подачи или в конец списка" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Style="{StaticResource ChargeProgram.ActionWithGap}" Content="↑ Выше" Command="{Binding MoveUpCommand}" />
+                <Button Style="{StaticResource ChargeProgram.ActionWithGap}" Content="↓ Ниже" Command="{Binding MoveDownCommand}" />
+                <Button Style="{StaticResource Button.Ghost}" Content="Удалить подачу" Command="{Binding RemoveRowCommand}" />
+            </StackPanel>
+        </DockPanel>
+
+        <StackPanel DockPanel.Dock="Bottom" Style="{StaticResource ChargeProgram.Actions}"
+                    Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Style="{StaticResource ChargeProgram.ActionWithGap}" Content="Отмена" IsCancel="True" />
+            <Button Style="{StaticResource Button.Primary}" Content="Применить матрицу" Click="ApplyProgram" />
+        </StackPanel>
+        <TextBlock DockPanel.Dock="Bottom" Style="{StaticResource ChargeProgram.Error}" Text="{Binding Error, TargetNullValue=''}" />
+
+        <DataGrid x:Name="Matrix" Style="{StaticResource ChargeProgram.Grid}"
+                  ColumnHeaderStyle="{StaticResource ChargeProgram.ColumnHeader}"
+                  ItemsSource="{Binding Rows}" SelectedItem="{Binding SelectedRow, Mode=TwoWay}"
+                  SelectionChanged="ScrollToSelectedRow" AutoGenerateColumns="False" HeadersVisibility="Column"
+                  SelectionMode="Single" CanUserAddRows="False" CanUserDeleteRows="False"
+                  CanUserReorderColumns="False" CanUserSortColumns="False" />
+    </DockPanel>
+</Window>

@@ -63,90 +63,31 @@ public sealed partial class ChargeProgramEditorViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Replaces all rows with the content parsed from <paramref name="clipboardText"/>.
-    /// Expected format: TSV where the first column is the material type (К or Р) and
-    /// the remaining eleven columns are portion counts in descending station order
-    /// (station 11 first, station 1 last) — matching the visual layout of the grid.
+    /// Parses <paramref name="clipboardText"/> (TSV copied from Excel) and updates the rows.
+    /// Two formats are accepted:
+    /// <list type="bullet">
+    /// <item>With type column — first cell is К or Р: all existing rows are replaced.</item>
+    /// <item>Without type column — first cell is a number: existing row types are kept
+    /// and their station values are overwritten in order. The number of pasted rows must
+    /// not exceed the number of existing rows.</item>
+    /// </list>
     /// Sets <see cref="Error"/> and returns <see langword="false"/> on parse failure.
     /// </summary>
     public bool TryPaste(string clipboardText)
     {
         ArgumentNullException.ThrowIfNull(clipboardText);
 
-        string[] lines = clipboardText
-            .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries);
-
+        string[] lines = clipboardText.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries);
         if (lines.Length == 0)
         {
             Error = "Буфер обмена пуст.";
             return false;
         }
 
-        List<ChargeDropRowViewModel> parsed = new(lines.Length);
-
-        for (int i = 0; i < lines.Length; i++)
-        {
-            string[] cells = lines[i].Split('\t');
-
-            ChargeMaterial? material = (cells.Length > 0 ? cells[0].Trim().ToUpperInvariant() : string.Empty) switch
-            {
-                "К" or "K" => ChargeMaterial.Coke,
-                "Р" or "P" => ChargeMaterial.Ore,
-                _ => null,
-            };
-
-            if (material is null)
-            {
-                string found = cells.Length > 0 ? cells[0].Trim() : string.Empty;
-                Error = string.Create(
-                    CultureInfo.CurrentCulture,
-                    $"Строка {i + 1}: неизвестный тип '{found}'. Укажите К для кокса или Р для руды.");
-                return false;
-            }
-
-            // Columns after the type are station values in descending order: 11, 10, …, 1.
-            // Cell index j+1 corresponds to station (11-j), stored at Portions[10-j].
-            int[] counts = new int[ChargeDrop.StationCount];
-            for (int j = 0; j < ChargeDrop.StationCount; j++)
-            {
-                int cellIdx = j + 1;
-                if (cellIdx >= cells.Length || string.IsNullOrWhiteSpace(cells[cellIdx]))
-                {
-                    continue;
-                }
-
-                string raw = cells[cellIdx].Trim();
-                if (!int.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out int count)
-                    && !int.TryParse(raw, NumberStyles.Integer, CultureInfo.CurrentCulture, out count))
-                {
-                    Error = string.Create(
-                        CultureInfo.CurrentCulture,
-                        $"Строка {i + 1}, станция {ChargeDrop.StationCount - j}: неверное значение '{raw}'.");
-                    return false;
-                }
-
-                if (count < 0)
-                {
-                    Error = string.Create(
-                        CultureInfo.CurrentCulture,
-                        $"Строка {i + 1}, станция {ChargeDrop.StationCount - j}: число порций не может быть отрицательным.");
-                    return false;
-                }
-
-                counts[10 - j] = count;
-            }
-
-            parsed.Add(new ChargeDropRowViewModel(material.Value, new ChargeDrop(material.Value, counts)));
-        }
-
-        Rows.Clear();
-        foreach (ChargeDropRowViewModel row in parsed)
-        {
-            Rows.Add(row);
-        }
-
-        Error = null;
-        return true;
+        string firstCell = lines[0].Split('\t')[0].Trim().ToUpperInvariant();
+        return firstCell is "К" or "K" or "Р" or "P"
+            ? TryPasteFullRows(lines)
+            : TryPasteStationValues(lines);
     }
 
     [RelayCommand]
@@ -198,6 +139,125 @@ public sealed partial class ChargeProgramEditorViewModel : ObservableObject
             Rows.Move(from, to);
             SelectedRow = row;
         }
+    }
+
+    // Full-replace: each line starts with К/Р, then 11 station values (descending order).
+    private bool TryPasteFullRows(string[] lines)
+    {
+        List<ChargeDropRowViewModel> parsed = new(lines.Length);
+        for (int i = 0; i < lines.Length; i++)
+        {
+            string[] cells = lines[i].Split('\t');
+            ChargeMaterial? material = (cells.Length > 0 ? cells[0].Trim().ToUpperInvariant() : string.Empty) switch
+            {
+                "К" or "K" => ChargeMaterial.Coke,
+                "Р" or "P" => ChargeMaterial.Ore,
+                _ => null,
+            };
+
+            if (material is null)
+            {
+                string found = cells.Length > 0 ? cells[0].Trim() : string.Empty;
+                Error = string.Create(CultureInfo.CurrentCulture, $"Строка {i + 1}: неизвестный тип '{found}'. Укажите К для кокса или Р для руды.");
+                return false;
+            }
+
+            if (!TryParseStationCells(cells, startCell: 1, lineNumber: i + 1, out int[]? counts))
+            {
+                return false;
+            }
+
+            parsed.Add(new ChargeDropRowViewModel(material.Value, new ChargeDrop(material.Value, counts)));
+        }
+
+        Rows.Clear();
+        foreach (ChargeDropRowViewModel row in parsed)
+        {
+            Rows.Add(row);
+        }
+
+        Error = null;
+        return true;
+    }
+
+    // Update-in-place: 11 station values per line (descending order), no type column.
+    // The material type is taken from the existing rows in the same position.
+    private bool TryPasteStationValues(string[] lines)
+    {
+        if (Rows.Count == 0)
+        {
+            Error = "Таблица пуста. Вставьте данные вместе с типом материала (К или Р) в первой колонке.";
+            return false;
+        }
+
+        if (lines.Length > Rows.Count)
+        {
+            Error = string.Create(
+                CultureInfo.CurrentCulture,
+                $"Вставляемых строк ({lines.Length}) больше, чем строк в таблице ({Rows.Count}). Добавьте строки заранее или вставьте вместе с типами (К/Р).");
+            return false;
+        }
+
+        // Parse all lines before modifying rows.
+        int[][] allCounts = new int[lines.Length][];
+        for (int i = 0; i < lines.Length; i++)
+        {
+            string[] cells = lines[i].Split('\t');
+            if (!TryParseStationCells(cells, startCell: 0, lineNumber: i + 1, out int[]? counts))
+            {
+                return false;
+            }
+
+            allCounts[i] = counts;
+        }
+
+        for (int i = 0; i < lines.Length; i++)
+        {
+            ChargeMaterial material = Rows[i].Material?.Trim().ToUpperInvariant() switch
+            {
+                "К" => ChargeMaterial.Coke,
+                _ => ChargeMaterial.Ore,
+            };
+            Rows[i] = new ChargeDropRowViewModel(material, new ChargeDrop(material, allCounts[i]));
+        }
+
+        Error = null;
+        return true;
+    }
+
+    // Parses up to 11 station values from cells starting at startCell, in descending station
+    // order (cell startCell → station 11, cell startCell+10 → station 1).
+    private bool TryParseStationCells(string[] cells, int startCell, int lineNumber, [NotNullWhen(true)] out int[]? counts)
+    {
+        counts = null;
+        int[] result = new int[ChargeDrop.StationCount];
+        for (int j = 0; j < ChargeDrop.StationCount; j++)
+        {
+            int cellIdx = startCell + j;
+            if (cellIdx >= cells.Length || string.IsNullOrWhiteSpace(cells[cellIdx]))
+            {
+                continue;
+            }
+
+            string raw = cells[cellIdx].Trim();
+            if (!int.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out int count)
+                && !int.TryParse(raw, NumberStyles.Integer, CultureInfo.CurrentCulture, out count))
+            {
+                Error = string.Create(CultureInfo.CurrentCulture, $"Строка {lineNumber}, станция {ChargeDrop.StationCount - j}: неверное значение '{raw}'.");
+                return false;
+            }
+
+            if (count < 0)
+            {
+                Error = string.Create(CultureInfo.CurrentCulture, $"Строка {lineNumber}, станция {ChargeDrop.StationCount - j}: число порций не может быть отрицательным.");
+                return false;
+            }
+
+            result[10 - j] = count;
+        }
+
+        counts = result;
+        return true;
     }
 
     private bool TryReadDrop(

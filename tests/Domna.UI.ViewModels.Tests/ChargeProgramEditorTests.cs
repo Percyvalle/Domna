@@ -121,6 +121,78 @@ public class ChargeProgramEditorTests
         Assert.Equal(75, Value(Parameter.ChargeStations9To11), 12);
     }
 
+    [Fact]
+    public void TryPaste_WithTypeColumn_ReplacesAllRows()
+    {
+        ChargeProgramEditorViewModel editor = _screen.EditChargeProgram();
+
+        // Two rows: Coke with station 9 = 2, Ore with station 6 = 1.
+        // Columns in descending order: 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1
+        bool ok = editor.TryPaste("К\t0\t0\t2\t0\t0\t0\t0\t0\t0\t0\t0\r\nР\t0\t0\t0\t0\t0\t1\t0\t0\t0\t0\t0\r\n");
+
+        Assert.True(ok, editor.Error);
+        Assert.Equal(2, editor.Rows.Count);
+        Assert.Equal("К", editor.Rows[0].Material);
+        Assert.Equal("2", editor.Rows[0].Portions[8]); // station 9 → index 8
+        Assert.Equal("Р", editor.Rows[1].Material);
+        Assert.Equal("1", editor.Rows[1].Portions[5]); // station 6 → index 5
+    }
+
+    [Fact]
+    public void TryPaste_WithoutTypeColumn_OverwritesPortionsKeepingExistingTypes()
+    {
+        ChargeProgramEditorViewModel editor = _screen.EditChargeProgram();
+
+        // Start with one Coke row and one Ore row (default editor).
+        // Paste only numbers: station 9 = 3 for first row, station 6 = 2 for second row.
+        bool ok = editor.TryPaste("0\t0\t3\t0\t0\t0\t0\t0\t0\t0\t0\r\n0\t0\t0\t0\t0\t2\t0\t0\t0\t0\t0\r\n");
+
+        Assert.True(ok, editor.Error);
+        Assert.Equal(2, editor.Rows.Count);
+        Assert.Equal("К", editor.Rows[0].Material); // type preserved
+        Assert.Equal("3", editor.Rows[0].Portions[8]); // station 9
+        Assert.Equal("Р", editor.Rows[1].Material); // type preserved
+        Assert.Equal("2", editor.Rows[1].Portions[5]); // station 6
+    }
+
+    [Fact]
+    public void TryPaste_WithoutTypeColumn_TooManyLines_ReturnsError()
+    {
+        ChargeProgramEditorViewModel editor = _screen.EditChargeProgram();
+
+        // 3 pasted rows but only 2 existing rows.
+        bool ok = editor.TryPaste(
+            "0\t0\t1\t0\t0\t0\t0\t0\t0\t0\t0\r\n" +
+            "0\t0\t0\t0\t0\t1\t0\t0\t0\t0\t0\r\n" +
+            "0\t1\t0\t0\t0\t0\t0\t0\t0\t0\t0\r\n");
+
+        Assert.False(ok);
+        Assert.NotNull(editor.Error);
+    }
+
+    [Fact]
+    public void TryPaste_InvalidValue_SetsError()
+    {
+        ChargeProgramEditorViewModel editor = _screen.EditChargeProgram();
+
+        bool ok = editor.TryPaste("К\t0\t0\txyz\t0\t0\t0\t0\t0\t0\t0\t0\r\n");
+
+        Assert.False(ok);
+        Assert.Contains("станция 9", editor.Error, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TryPaste_LatinKP_AcceptedAsMaterial()
+    {
+        ChargeProgramEditorViewModel editor = _screen.EditChargeProgram();
+
+        bool ok = editor.TryPaste("K\t0\t0\t1\t0\t0\t0\t0\t0\t0\t0\t0\r\nP\t0\t0\t0\t0\t1\t0\t0\t0\t0\t0\t0\r\n");
+
+        Assert.True(ok, editor.Error);
+        Assert.Equal("К", editor.Rows[0].Material);
+        Assert.Equal("Р", editor.Rows[1].Material);
+    }
+
     private static void SetPortions(ChargeDropRowViewModel row, params int[] stations)
     {
         foreach (int station in stations)

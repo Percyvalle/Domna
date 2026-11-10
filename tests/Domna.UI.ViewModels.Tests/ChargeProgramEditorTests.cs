@@ -193,6 +193,54 @@ public class ChargeProgramEditorTests
         Assert.Equal("Р", editor.Rows[1].Material);
     }
 
+    [Fact]
+    public void TryPaste_SingleRowWithInsertIndex_InsertsAfterThatRow()
+    {
+        ChargeProgramEditorViewModel editor = _screen.EditChargeProgram();
+
+        // Default editor has [К, Р]. Insert a new Ore row after index 0 (after Coke).
+        bool ok = editor.TryPaste("Р\t0\t0\t3\t0\t0\t0\t0\t0\t0\t0\t0\r\n", insertAfterIndex: 0);
+
+        Assert.True(ok, editor.Error);
+        Assert.Equal(3, editor.Rows.Count);
+        Assert.Equal("К", editor.Rows[0].Material);
+        Assert.Equal("Р", editor.Rows[1].Material);
+        Assert.Equal("3", editor.Rows[1].Portions[8]); // station 9 → index 8
+        Assert.Equal("Р", editor.Rows[2].Material);
+        Assert.Same(editor.Rows[1], editor.SelectedRow);
+    }
+
+    [Fact]
+    public void TryPaste_SingleRowWithInsertIndexAtEnd_AppendsRow()
+    {
+        ChargeProgramEditorViewModel editor = _screen.EditChargeProgram();
+
+        // Insert after index 1 (the last row) → should append.
+        bool ok = editor.TryPaste("К\t0\t0\t0\t0\t0\t5\t0\t0\t0\t0\t0\r\n", insertAfterIndex: 1);
+
+        Assert.True(ok, editor.Error);
+        Assert.Equal(3, editor.Rows.Count);
+        Assert.Equal("К", editor.Rows[2].Material);
+        Assert.Equal("5", editor.Rows[2].Portions[5]); // station 6 → index 5
+        Assert.Same(editor.Rows[2], editor.SelectedRow);
+    }
+
+    [Fact]
+    public void TryPaste_MultipleRowsWithInsertIndex_ReplacesAllRows()
+    {
+        ChargeProgramEditorViewModel editor = _screen.EditChargeProgram();
+
+        // Even with insertAfterIndex set, multiple lines always do full replace.
+        bool ok = editor.TryPaste(
+            "К\t0\t0\t1\t0\t0\t0\t0\t0\t0\t0\t0\r\nР\t0\t0\t0\t0\t0\t1\t0\t0\t0\t0\t0\r\n",
+            insertAfterIndex: 0);
+
+        Assert.True(ok, editor.Error);
+        Assert.Equal(2, editor.Rows.Count);
+        Assert.Equal("К", editor.Rows[0].Material);
+        Assert.Equal("Р", editor.Rows[1].Material);
+    }
+
     private static void SetPortions(ChargeDropRowViewModel row, params int[] stations)
     {
         foreach (int station in stations)

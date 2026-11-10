@@ -50,7 +50,10 @@ public partial class ChargeProgramWindow : Window
             && Clipboard.GetText() is { } text
             && text.Contains('\t'))
         {
-            _editor.TryPaste(text);
+            int insertAfterIndex = _editor.SelectedRow != null
+                ? _editor.Rows.IndexOf(_editor.SelectedRow)
+                : -1;
+            _editor.TryPaste(text, insertAfterIndex);
             e.Handled = true;
         }
     }

@@ -64,16 +64,19 @@ public sealed partial class ChargeProgramEditorViewModel : ObservableObject
 
     /// <summary>
     /// Parses <paramref name="clipboardText"/> (TSV copied from Excel) and updates the rows.
-    /// Two formats are accepted:
+    /// Three formats are accepted:
     /// <list type="bullet">
-    /// <item>With type column — first cell is К or Р: all existing rows are replaced.</item>
+    /// <item>With type column, single line, and <paramref name="insertAfterIndex"/> ≥ 0:
+    /// the parsed row is inserted after the given index and becomes the selected row.</item>
+    /// <item>With type column, multiple lines (or no insertion index): all existing rows
+    /// are replaced.</item>
     /// <item>Without type column — first cell is a number: existing row types are kept
     /// and their station values are overwritten in order. The number of pasted rows must
     /// not exceed the number of existing rows.</item>
     /// </list>
     /// Sets <see cref="Error"/> and returns <see langword="false"/> on parse failure.
     /// </summary>
-    public bool TryPaste(string clipboardText)
+    public bool TryPaste(string clipboardText, int insertAfterIndex = -1)
     {
         ArgumentNullException.ThrowIfNull(clipboardText);
 
@@ -86,7 +89,7 @@ public sealed partial class ChargeProgramEditorViewModel : ObservableObject
 
         string firstCell = lines[0].Split('\t')[0].Trim().ToUpperInvariant();
         return firstCell is "К" or "K" or "Р" or "P"
-            ? TryPasteFullRows(lines)
+            ? TryPasteFullRows(lines, insertAfterIndex)
             : TryPasteStationValues(lines);
     }
 
@@ -141,8 +144,9 @@ public sealed partial class ChargeProgramEditorViewModel : ObservableObject
         }
     }
 
-    // Full-replace: each line starts with К/Р, then 11 station values (descending order).
-    private bool TryPasteFullRows(string[] lines)
+    // Full-replace (or single-row insert): each line starts with К/Р, then 11 station values.
+    // When lines.Length == 1 and insertAfterIndex >= 0, inserts the row instead of replacing all.
+    private bool TryPasteFullRows(string[] lines, int insertAfterIndex)
     {
         List<ChargeDropRowViewModel> parsed = new(lines.Length);
         for (int i = 0; i < lines.Length; i++)
@@ -170,10 +174,19 @@ public sealed partial class ChargeProgramEditorViewModel : ObservableObject
             parsed.Add(new ChargeDropRowViewModel(material.Value, new ChargeDrop(material.Value, counts)));
         }
 
-        Rows.Clear();
-        foreach (ChargeDropRowViewModel row in parsed)
+        if (lines.Length == 1 && insertAfterIndex >= 0)
         {
-            Rows.Add(row);
+            int insertAt = Math.Min(insertAfterIndex + 1, Rows.Count);
+            Rows.Insert(insertAt, parsed[0]);
+            SelectedRow = parsed[0];
+        }
+        else
+        {
+            Rows.Clear();
+            foreach (ChargeDropRowViewModel row in parsed)
+            {
+                Rows.Add(row);
+            }
         }
 
         Error = null;

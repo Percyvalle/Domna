@@ -19,7 +19,7 @@ public class OptimizerParameterChangesTests
             _optimizer,
             new RecordingExportTarget(),
             new FixedTimeProvider(new DateTimeOffset(2026, 9, 2, 12, 34, 56, TimeSpan.Zero)));
-        _screen.SaveSnapshot();
+        _screen.Calculate();
         Input(Parameter.BurdenLevel).IsFree = true;
         Input(Parameter.CokeSize).IsFree = true;
         _optimizer.Answer = ParameterSet.Defaults

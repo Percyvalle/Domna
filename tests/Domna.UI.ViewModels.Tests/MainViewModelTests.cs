@@ -63,12 +63,10 @@ public class MainViewModelTests
     }
 
     [Fact]
-    public void SaveSnapshot_CalculatesWhatIsEnteredBeforeSavingIt()
+    public void Calculate_SavesResultToHistory()
     {
-        // Never calculated, never saved: one press has to do both, or the operator
-        // saves whatever was on screen instead of what they typed.
         _screen.Inputs[(int)Parameter.BurdenLevel].Value = 2.4;
-        _screen.SaveSnapshot();
+        _screen.Calculate();
 
         HistoryEntryViewModel entry = Assert.Single(_screen.History);
         Assert.Equal(2.4, entry.Parameters[Parameter.BurdenLevel]);
@@ -77,21 +75,20 @@ public class MainViewModelTests
     }
 
     [Fact]
-    public void SaveSnapshot_SavesNothingWhenTheCalculationFails()
+    public void Calculate_SavesNothingWhenTheCalculationFails()
     {
         _calculator.Override = new TemperatureProfile(double.NaN, 1.0, 1.0);
 
-        _screen.SaveSnapshot();
+        _screen.Calculate();
 
         Assert.Empty(_screen.History);
         Assert.True(_screen.HasCalculationError);
     }
 
     [Fact]
-    public void SaveSnapshot_MakesTheFirstSavedCalculationTheBaseline()
+    public void Calculate_MakesTheFirstResultTheBaseline()
     {
         _screen.Calculate();
-        _screen.SaveSnapshot();
 
         HistoryEntryViewModel entry = Assert.Single(_screen.History);
         Assert.True(entry.IsBaseline);
@@ -106,7 +103,6 @@ public class MainViewModelTests
     public void ComparingAgainstASavedCalculation_ShowsTheDirectionOfEveryDelta()
     {
         _screen.Calculate();
-        _screen.SaveSnapshot();
 
         _screen.Inputs[(int)Parameter.BurdenLevel].Value = 2.4;
         _screen.Calculate();
@@ -119,10 +115,9 @@ public class MainViewModelTests
     public void DeletingAnEntry_LeavesTheRestOfTheHistoryAlone()
     {
         _screen.Calculate();
-        _screen.SaveSnapshot();
 
         _screen.Inputs[(int)Parameter.BurdenLevel].Value = 2.4;
-        _screen.SaveSnapshot();
+        _screen.Calculate();
 
         HistoryEntryViewModel baseline = _screen.History[0];
         _screen.History[1].Delete();
@@ -136,10 +131,9 @@ public class MainViewModelTests
     public void DeletingTheBaseline_LeavesTheScreenWithoutOne()
     {
         _screen.Calculate();
-        _screen.SaveSnapshot();
 
         _screen.Inputs[(int)Parameter.BurdenLevel].Value = 2.4;
-        _screen.SaveSnapshot();
+        _screen.Calculate();
 
         _screen.History[0].Delete();
 
@@ -155,7 +149,6 @@ public class MainViewModelTests
     public void DeletingTheLastEntry_EmptiesTheHistory()
     {
         _screen.Calculate();
-        _screen.SaveSnapshot();
 
         _screen.History[0].Delete();
 
@@ -168,7 +161,7 @@ public class MainViewModelTests
     {
         Assert.False(_screen.ExportHistoryCommand.CanExecute(null));
 
-        _screen.SaveSnapshot();
+        _screen.Calculate();
 
         Assert.True(_screen.ExportHistoryCommand.CanExecute(null));
     }
@@ -176,7 +169,7 @@ public class MainViewModelTests
     [Fact]
     public void ExportHistory_OffersADatedFileNameAndReportsWhereItLanded()
     {
-        _screen.SaveSnapshot();
+        _screen.Calculate();
         _screen.ExportHistory();
 
         Assert.Equal("Домна · история 2026-09-02 12-34.csv", _export.SuggestedFileName);
@@ -186,9 +179,9 @@ public class MainViewModelTests
     [Fact]
     public void ExportHistory_HandsOverEverySavedCalculation()
     {
-        _screen.SaveSnapshot();
+        _screen.Calculate();
         _screen.Inputs[(int)Parameter.BurdenLevel].Value = 2.4;
-        _screen.SaveSnapshot();
+        _screen.Calculate();
 
         _screen.ExportHistory();
 
@@ -201,7 +194,7 @@ public class MainViewModelTests
     {
         _export.Accepts = false;
 
-        _screen.SaveSnapshot();
+        _screen.Calculate();
         _screen.ExportHistory();
 
         Assert.Equal(1, _export.Calls);
@@ -213,10 +206,10 @@ public class MainViewModelTests
     {
         // The file on disk no longer describes the history, so saying where it went
         // would point the operator at a table that is missing a row.
-        _screen.SaveSnapshot();
+        _screen.Calculate();
         _screen.ExportHistory();
 
-        _screen.SaveSnapshot();
+        _screen.Calculate();
 
         Assert.Null(_screen.LastExportPath);
     }
@@ -225,7 +218,6 @@ public class MainViewModelTests
     public void ClearHistory_TakesTheBaselineWithIt()
     {
         _screen.Calculate();
-        _screen.SaveSnapshot();
         _screen.ClearHistory();
 
         Assert.Empty(_screen.History);
@@ -238,7 +230,6 @@ public class MainViewModelTests
     public void LoadingASavedCalculation_PutsItsParametersBackAndRecalculates()
     {
         _screen.Calculate();
-        _screen.SaveSnapshot();
 
         _screen.Inputs[(int)Parameter.BurdenLevel].Value = 2.4;
         _screen.Calculate();
@@ -306,12 +297,12 @@ public class MainViewModelTests
     [Fact]
     public void FreeParametersCaption_CountsWhatTheOptimizerMayMove()
     {
-        Assert.Equal("свободных: 0 / 8", _screen.FreeParametersCaption);
+        Assert.Equal("свободных: 0 / 11", _screen.FreeParametersCaption);
 
         _screen.Inputs[0].IsFree = true;
         _screen.Inputs[3].IsFree = true;
 
-        Assert.Equal("свободных: 2 / 8", _screen.FreeParametersCaption);
+        Assert.Equal("свободных: 2 / 11", _screen.FreeParametersCaption);
     }
 
     [Fact]
@@ -344,7 +335,6 @@ public class MainViewModelTests
     public void TheOptimizerIsOfferedOnlyTheParametersTheOperatorReleased()
     {
         _screen.Calculate();
-        _screen.SaveSnapshot();
         _screen.Inputs[(int)Parameter.CokeSize].IsFree = true;
 
         _screen.Optimization.Run();
@@ -362,12 +352,11 @@ public class MainViewModelTests
     [Fact]
     public void TheOptimizerCannotRunWithoutABaseline()
     {
-        _screen.Calculate();
         _screen.Inputs[0].IsFree = true;
 
         Assert.False(_screen.Optimization.RunCommand.CanExecute(null));
 
-        _screen.SaveSnapshot();
+        _screen.Calculate();
 
         Assert.True(_screen.Optimization.RunCommand.CanExecute(null));
     }

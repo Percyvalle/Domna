@@ -14,8 +14,13 @@ namespace Domna.Domain.Optimization;
 /// <param name="Residual">Objective value at <paramref name="Parameters"/>; zero is an exact hit.</param>
 /// <param name="Rounds">Number of search rounds actually run.</param>
 /// <param name="Cancelled">True when cancellation was requested before the outcome was returned.</param>
+/// <param name="UpdatedChargeProgram">
+/// The charge program rebuilt to reflect the integer redistribution the optimizer chose, or
+/// <see langword="null"/> when the search ran in continuous mode or no zone redistribution occurred.
+/// </param>
 public readonly record struct OptimizationOutcome(
     ParameterSet Parameters,
     double Residual,
     int Rounds,
-    bool Cancelled);
+    bool Cancelled,
+    ChargeProgram? UpdatedChargeProgram = null);

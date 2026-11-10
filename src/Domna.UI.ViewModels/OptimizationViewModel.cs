@@ -31,11 +31,12 @@ public sealed partial class OptimizationViewModel : ObservableObject
     private const double MinimumBarScale = 0.02;
 
     private readonly IParameterOptimizer _optimizer;
-    private readonly Action<ParameterSet, ParameterSet> _apply;
+    private readonly Action<ParameterSet, ParameterSet, ChargeProgram?> _apply;
 
     private ParameterSet _start = ParameterSet.Defaults;
     private TemperatureProfile? _baseline;
     private Parameter[] _free = [];
+    private ChargeProgram? _program;
     private CancellationTokenSource? _cancellation;
 
     [ObservableProperty]
@@ -46,11 +47,20 @@ public sealed partial class OptimizationViewModel : ObservableObject
     [ObservableProperty]
     private string _pairCaption = NoBaselinePair;
 
+    /// <summary>
+    /// When true, the optimizer moves integer portions between charge zones rather
+    /// than adjusting the share values as continuous variables. Requires a charge
+    /// program to have been entered; resets to false automatically when the program
+    /// is cleared.
+    /// </summary>
+    [ObservableProperty]
+    private bool _useMatrixMode;
+
     /// <summary>Mutation scaling factor (DE parameter F) passed to the next search.</summary>
     [ObservableProperty]
     private double _mutationWeight = 0.6;
 
-    public OptimizationViewModel(IParameterOptimizer optimizer, Action<ParameterSet, ParameterSet> apply)
+    public OptimizationViewModel(IParameterOptimizer optimizer, Action<ParameterSet, ParameterSet, ChargeProgram?> apply)
     {
         ArgumentNullException.ThrowIfNull(optimizer);
         ArgumentNullException.ThrowIfNull(apply);
@@ -69,6 +79,9 @@ public sealed partial class OptimizationViewModel : ObservableObject
 
     public string ButtonCaption => IsRunning ? "Отменить" : "Запустить подбор";
 
+    /// <summary>True when a charge program is available, enabling the matrix-mode toggle.</summary>
+    public bool HasProgram => _program is not null;
+
     /// <summary>Decimal places used when displaying F in the UI.</summary>
     public int SearchSettingDecimals { get; } = 3;
 
@@ -80,18 +93,31 @@ public sealed partial class OptimizationViewModel : ObservableObject
     /// <param name="baseline">The baseline profile every delta is read against, or none.</param>
     /// <param name="free">The parameters the operator has released to the optimizer.</param>
     /// <param name="pairCaption">Which two calculations the search runs between.</param>
+    /// <param name="program">
+    /// The charge program the current calculation was derived from, or <see langword="null"/>
+    /// when the station values were entered manually. Supplying a program enables matrix mode.
+    /// </param>
     public void Refresh(
         ParameterSet start,
         TemperatureProfile? current,
         TemperatureProfile? baseline,
         IReadOnlyList<Parameter> free,
-        string pairCaption)
+        string pairCaption,
+        ChargeProgram? program = null)
     {
         ArgumentNullException.ThrowIfNull(free);
 
         _start = start;
         _baseline = baseline;
         _free = [.. free];
+        _program = program;
+
+        if (program is null)
+        {
+            UseMatrixMode = false;
+        }
+
+        OnPropertyChanged(nameof(HasProgram));
 
         ProfileRatios? actual = current is { } profile ? ProfileRatios.Of(profile) : null;
         ProfileRatios? reference = baseline is { } target ? ProfileRatios.Of(target) : null;
@@ -133,7 +159,28 @@ public sealed partial class OptimizationViewModel : ObservableObject
     private static double? Gap(double? actual, double? reference) =>
         actual is { } a && reference is { } b ? a - b : null;
 
-    private bool CanRun() => IsRunning || (_baseline is not null && _free.Length > 0);
+    private static bool IsStationParameter(Parameter p) => p is
+        Parameter.ChargeStations3To5 or Parameter.ChargeStations6To8 or Parameter.ChargeStations9To11;
+
+    private bool CanRun()
+    {
+        if (IsRunning)
+        {
+            return true;
+        }
+
+        if (_baseline is null || _free.Length == 0)
+        {
+            return false;
+        }
+
+        // A single station parameter cannot be moved without a partner to absorb the
+        // balance — ChargeStationBalance requires ≥2, and in matrix mode a single free
+        // zone leaves no redistribution dimensions. Non-station parameters are always
+        // effective.
+        int stationCount = _free.Count(IsStationParameter);
+        return stationCount >= 2 || stationCount < _free.Length;
+    }
 
     private async Task SearchAsync()
     {
@@ -143,6 +190,9 @@ public sealed partial class OptimizationViewModel : ObservableObject
             Target = _baseline!.Value,
             FreeParameters = _free,
             Settings = new SearchSettings { MutationWeight = MutationWeight },
+            StationMode = UseMatrixMode && _program is not null
+                ? new ChargeStationMode.Matrix(_program)
+                : new ChargeStationMode.Continuous(),
         };
 
         using CancellationTokenSource cancellation = new();
@@ -161,7 +211,7 @@ public sealed partial class OptimizationViewModel : ObservableObject
             // A cancelled search is not a result: its point must not reach the inputs.
             if (!outcome.Cancelled)
             {
-                _apply(request.Start, outcome.Parameters);
+                _apply(request.Start, outcome.Parameters, outcome.UpdatedChargeProgram);
             }
         }
         finally

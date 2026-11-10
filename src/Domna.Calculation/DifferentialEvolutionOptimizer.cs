@@ -53,18 +53,30 @@ public sealed class DifferentialEvolutionOptimizer : IParameterOptimizer
         ArgumentNullException.ThrowIfNull(request);
 
         RatioObjective objective = new(_calculator, request.Target);
-        Parameter[] free = ChargeStationBalance.MovableParameters(request);
+
+        double[] start;
+        Func<double[], ParameterSet> decode;
+        Func<double[], ChargeProgram?> decodeProgram;
+
+        if (request.StationMode is ChargeStationMode.Matrix { Program: var program })
+        {
+            (start, decode, decodeProgram) = BuildMatrixSearch(request, program);
+        }
+        else
+        {
+            (start, decode) = BuildContinuousSearch(request);
+            decodeProgram = _ => null;
+        }
 
         // Nothing is free: the answer is the question. Reported as a finished search
         // carrying the start point's residual, so the screen can still say how far off it is.
-        if (free.Length == 0)
+        if (start.Length == 0)
         {
             return new OptimizationOutcome(request.Start, objective.At(request.Start), 0, cancellationToken.IsCancellationRequested);
         }
 
-        double[] start = Coordinates(request.Start, free);
         double[] best = start;
-        double bestScore = objective.At(Materialize(start, request, free));
+        double bestScore = objective.At(decode(start));
         int roundsRun = 0;
 
         for (int round = 0; round < Rounds && !cancellationToken.IsCancellationRequested; round++)
@@ -72,7 +84,7 @@ public sealed class DifferentialEvolutionOptimizer : IParameterOptimizer
             SearchCandidates candidates = new();
             double Evaluate(double[] point)
             {
-                double score = objective.At(Materialize(point, request, free));
+                double score = objective.At(decode(point));
                 candidates.Consider(point, score);
                 if (score < bestScore)
                 {
@@ -93,7 +105,57 @@ public sealed class DifferentialEvolutionOptimizer : IParameterOptimizer
         }
 
         return new OptimizationOutcome(
-            Materialize(best, request, free), bestScore, roundsRun, cancellationToken.IsCancellationRequested);
+            Parameters: decode(best),
+            Residual: bestScore,
+            Rounds: roundsRun,
+            Cancelled: cancellationToken.IsCancellationRequested,
+            UpdatedChargeProgram: decodeProgram(best));
+    }
+
+    private static (double[] Start, Func<double[], ParameterSet> Decode) BuildContinuousSearch(
+        OptimizationRequest request)
+    {
+        Parameter[] free = ChargeStationBalance.MovableParameters(request);
+        if (free.Length == 0)
+        {
+            return ([], _ => request.Start);
+        }
+
+        double[] start = Coordinates(request.Start, free);
+        return (start, coords => Materialize(coords, request, free));
+    }
+
+    private static (double[] Start, Func<double[], ParameterSet> Decode, Func<double[], ChargeProgram?> DecodeProgram) BuildMatrixSearch(
+        OptimizationRequest request, ChargeProgram program)
+    {
+        int[] freeZoneBuckets = GetFreeZoneBuckets(request.FreeParameters);
+        MatrixStationConstraint matrix = new(program, freeZoneBuckets);
+        Parameter[] freeNonStation = [.. request.FreeParameters.Distinct().Where(IsNonStation)];
+
+        // Nothing moves: no non-station params are free and the matrix has
+        // nothing to redistribute between zones.
+        if (freeNonStation.Length == 0 && !matrix.IsMovable)
+        {
+            return ([], _ => request.Start, _ => null);
+        }
+
+        double[] matrixStart = matrix.IsMovable ? matrix.Encode() : [];
+        double[] nonStationStart = Coordinates(request.Start, freeNonStation);
+        double[] start = [.. nonStationStart, .. matrixStart];
+
+        Func<double[], ParameterSet> decode = coords =>
+        {
+            ParameterSet ps = ApplyCoordinates(coords, request.Start, freeNonStation);
+            return matrix.IsMovable
+                ? matrix.Decode(ps, coords.AsSpan(freeNonStation.Length))
+                : ps;
+        };
+
+        Func<double[], ChargeProgram?> decodeProgram = matrix.IsMovable
+            ? coords => matrix.BuildUpdatedProgram(program, coords.AsSpan(freeNonStation.Length))
+            : _ => null;
+
+        return (start, decode, decodeProgram);
     }
 
     private static void SearchRound(
@@ -127,6 +189,30 @@ public sealed class DifferentialEvolutionOptimizer : IParameterOptimizer
         }
     }
 
+    private static bool IsNonStation(Parameter p) => p is not (
+        Parameter.ChargeStations9To11 or Parameter.ChargeStations6To8 or Parameter.ChargeStations3To5);
+
+    /// <summary>
+    /// Returns the sorted bucket indices (1, 2, 3) for the zone parameters in
+    /// <paramref name="freeParameters"/>. When none are present, defaults to all three
+    /// zones so that existing matrix-mode requests without explicit zone selection
+    /// continue to redistribute across the full range.
+    /// </summary>
+    private static int[] GetFreeZoneBuckets(IReadOnlyList<Parameter> freeParameters)
+    {
+        int[] buckets = [.. freeParameters
+            .Where(p => p is Parameter.ChargeStations3To5 or Parameter.ChargeStations6To8 or Parameter.ChargeStations9To11)
+            .Select(p => p switch
+            {
+                Parameter.ChargeStations3To5 => 1,
+                Parameter.ChargeStations6To8 => 2,
+                _ => 3,
+            })
+            .Distinct()
+            .OrderBy(b => b)];
+        return buckets.Length == 0 ? [1, 2, 3] : buckets;
+    }
+
     /// <summary>The free parameters of <paramref name="parameters"/> as fractions of their range.</summary>
     private static double[] Coordinates(ParameterSet parameters, Parameter[] free)
     {
@@ -141,16 +227,23 @@ public sealed class DifferentialEvolutionOptimizer : IParameterOptimizer
         return coordinates;
     }
 
-    /// <summary>The start set with the free parameters moved to <paramref name="coordinates"/>.</summary>
-    private static ParameterSet Materialize(double[] coordinates, OptimizationRequest request, Parameter[] free)
+    /// <summary>Writes the given parameters from their normalized coordinates into the start set.</summary>
+    private static ParameterSet ApplyCoordinates(double[] coordinates, ParameterSet start, Parameter[] free)
     {
-        ParameterSet parameters = request.Start;
+        ParameterSet parameters = start;
         for (int d = 0; d < free.Length; d++)
         {
             ParameterRange range = ParameterCatalog.RangeOf(free[d]);
             parameters = parameters.With(free[d], range.Minimum + (coordinates[d] * (range.Maximum - range.Minimum)));
         }
 
+        return parameters;
+    }
+
+    /// <summary>The start set with the free parameters moved to <paramref name="coordinates"/>.</summary>
+    private static ParameterSet Materialize(double[] coordinates, OptimizationRequest request, Parameter[] free)
+    {
+        ParameterSet parameters = ApplyCoordinates(coordinates, request.Start, free);
         return ChargeStationBalance.Restore(parameters, request.Start, free);
     }
 }

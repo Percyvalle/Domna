@@ -36,8 +36,6 @@
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                         <Button Style="{StaticResource Button.Ghost}"
                                 Command="{Binding OpenProtocolCommand}" Content="Протокол" />
-                        <Button Style="{StaticResource Button.Ghost}" Margin="10,0,0,0"
-                                Command="{Binding SaveSnapshotCommand}" Content="Сохранить расчёт" />
                         <Button Style="{StaticResource Button.Primary}" Margin="10,0,0,0"
                                 Command="{Binding CalculateCommand}" Content="Рассчитать" />
                     </StackPanel>

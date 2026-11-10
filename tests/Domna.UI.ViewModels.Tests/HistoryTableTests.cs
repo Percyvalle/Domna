@@ -25,7 +25,7 @@ public class HistoryTableTests
     [Fact]
     public void EveryColumnIsNamed_OnceForEachValueInARow()
     {
-        _screen.SaveSnapshot();
+        _screen.Calculate();
 
         string[] lines = Lines(HistoryTable.Render(_screen.History, Russian));
 
@@ -37,7 +37,7 @@ public class HistoryTableTests
     [Fact]
     public void ARussianTableUsesTheCommaAndSemicolonExcelExpectsThere()
     {
-        _screen.SaveSnapshot();
+        _screen.Calculate();
 
         string row = Lines(HistoryTable.Render(_screen.History, Russian))[1];
 
@@ -49,7 +49,7 @@ public class HistoryTableTests
     [Fact]
     public void AnAmericanTableUsesThePointAndComma()
     {
-        _screen.SaveSnapshot();
+        _screen.Calculate();
 
         string row = Lines(HistoryTable.Render(_screen.History, American))[1];
 
@@ -60,7 +60,7 @@ public class HistoryTableTests
     [Fact]
     public void ACellHoldingTheSeparatorIsQuoted()
     {
-        _screen.SaveSnapshot();
+        _screen.Calculate();
 
         // A Russian header names units after a comma; under en-US the comma is the
         // delimiter, so the heading has to be quoted or the columns shift by one.
@@ -72,9 +72,9 @@ public class HistoryTableTests
     [Fact]
     public void EachSavedCalculationBecomesOneRow_InTheOrderItWasSaved()
     {
-        _screen.SaveSnapshot();
+        _screen.Calculate();
         _screen.Inputs[(int)Parameter.BurdenLevel].Value = 2.4;
-        _screen.SaveSnapshot();
+        _screen.Calculate();
 
         string[] lines = Lines(HistoryTable.Render(_screen.History, Russian));
 
@@ -86,11 +86,11 @@ public class HistoryTableTests
     [Fact]
     public void ARowSaysWhetherItLeftTheFittedRegion()
     {
-        _screen.SaveSnapshot();
+        _screen.Calculate();
 
         ParameterRange range = ParameterCatalog.RangeOf(Parameter.BurdenLevel);
         _screen.Inputs[(int)Parameter.BurdenLevel].Value = range.Maximum + 1.0;
-        _screen.SaveSnapshot();
+        _screen.Calculate();
 
         string[] lines = Lines(HistoryTable.Render(_screen.History, Russian));
 
@@ -101,7 +101,7 @@ public class HistoryTableTests
     [Fact]
     public void RowsEndWithTheLineBreakAWindowsSpreadsheetExpects()
     {
-        _screen.SaveSnapshot();
+        _screen.Calculate();
 
         Assert.EndsWith("\r\n", HistoryTable.Render(_screen.History, Russian), StringComparison.Ordinal);
     }

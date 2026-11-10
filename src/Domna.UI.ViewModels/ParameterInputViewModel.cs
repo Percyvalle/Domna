@@ -30,6 +30,12 @@ public sealed partial class ParameterInputViewModel : ObservableObject
     [ObservableProperty]
     private double _effectiveMaximum;
 
+    /// <summary>True while this parameter's value is controlled by a loaded charge program.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanOptimize))]
+    [NotifyPropertyChangedFor(nameof(CalculatedValueDetail))]
+    private bool _isCalculated;
+
     public ParameterInputViewModel(ParameterLabel label, Action onValueChanged, Action onFreeChanged, Action onBoundsChanged)
     {
         ArgumentNullException.ThrowIfNull(onValueChanged);
@@ -52,10 +58,11 @@ public sealed partial class ParameterInputViewModel : ObservableObject
 
     public Parameter Parameter { get; }
 
-    public bool IsCalculated => Parameter is
+    /// <summary>True for the three zone parameters, regardless of whether a charge program is loaded.</summary>
+    public bool IsStation => Parameter is
         Parameter.ChargeStations9To11 or Parameter.ChargeStations6To8 or Parameter.ChargeStations3To5;
 
-    public bool CanOptimize => !IsCalculated;
+    public bool CanOptimize => !IsCalculated || IsStation;
 
     public string? CalculatedValueDetail => IsCalculated
         ? string.Create(CultureInfo.CurrentCulture, $"Точное значение: {Value:G} {Unit}")
@@ -114,6 +121,16 @@ public sealed partial class ParameterInputViewModel : ObservableObject
     }
 
     partial void OnIsFreeChanged(bool value) => _onFreeChanged();
+
+    partial void OnIsCalculatedChanged(bool value)
+    {
+        if (value)
+        {
+            IsFree = false;
+        }
+
+        _onFreeChanged();
+    }
 
     partial void OnEffectiveMinimumChanged(double value)
     {

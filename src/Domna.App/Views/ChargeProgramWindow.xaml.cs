@@ -20,7 +20,9 @@ public partial class ChargeProgramWindow : Window
         DataContext = editor;
         editor.Rows.CollectionChanged += OnRowsChanged;
 
-        Matrix.Columns.Add(Column("Тип", nameof(ChargeDropRowViewModel.Material)));
+        DataGridTextColumn typeColumn = Column("Тип", nameof(ChargeDropRowViewModel.Material));
+        typeColumn.IsReadOnly = true;
+        Matrix.Columns.Add(typeColumn);
         for (int station = ChargeDrop.StationCount; station >= 1; station--)
         {
             Matrix.Columns.Add(Column(

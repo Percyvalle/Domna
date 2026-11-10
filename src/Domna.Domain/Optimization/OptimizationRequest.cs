@@ -28,4 +28,12 @@ public sealed class OptimizationRequest
 
     /// <summary>Algorithm tuning knobs applied to every independent search round.</summary>
     public SearchSettings Settings { get; init; } = new();
+
+    /// <summary>
+    /// How the optimizer constrains the three charge-station parameters.
+    /// Defaults to <see cref="ChargeStationMode.Continuous"/> (sum-preserving continuous search).
+    /// Set to <see cref="ChargeStationMode.Matrix"/> to restrict the search to integer portion
+    /// distributions that are physically realizable from the supplied charge program.
+    /// </summary>
+    public ChargeStationMode StationMode { get; init; } = new ChargeStationMode.Continuous();
 }

@@ -40,6 +40,7 @@ public sealed partial class MainViewModel : ObservableObject
     private ChargeProgram? _committedChargeProgram;
     private TemperatureProfile? _profile;
     private HistoryEntryViewModel? _baseline;
+    private HistoryEntryViewModel? _loadedEntry;
     private bool _applyingParameters;
     private int _sequence = 1;
 
@@ -80,8 +81,8 @@ public sealed partial class MainViewModel : ObservableObject
 
         Inputs = [.. ParameterLabels.All.Select(
             label => new ParameterInputViewModel(label, OnInputEdited, OnFreeParametersChanged, OnBoundsChanged))];
-        ProcessInputs = [.. Inputs.Where(input => !input.IsCalculated)];
-        StationInputs = [.. Inputs.Where(input => input.IsCalculated)];
+        ProcessInputs = [.. Inputs.Where(input => !input.IsStation)];
+        StationInputs = [.. Inputs.Where(input => input.IsStation)];
 
         // The optimizer panel is owned here rather than injected, because the only
         // thing it can do with an answer is hand it back to this input list.
@@ -153,28 +154,14 @@ public sealed partial class MainViewModel : ObservableObject
     private ParameterSet CurrentParameters =>
         ParameterSet.From(Inputs.ToDictionary(input => input.Parameter, input => input.Value));
 
-    /// <summary>Runs the model on what is currently in the input list.</summary>
+    /// <summary>Runs the model on what is currently in the input list and saves the result to history.</summary>
     [RelayCommand]
     public void Calculate()
     {
-        ParameterSet parameters = CurrentParameters;
-        TemperatureProfile profile = _calculator.Calculate(parameters);
-
-        if (!profile.IsFinite)
+        if (RunCalculation())
         {
-            // Keep the previous result on screen rather than replacing it with a
-            // non-number, and say plainly that it belongs to the previous input.
-            CalculationErrorDetail = DescribeNonFiniteResult(parameters);
-            return;
+            AddHistoryEntry();
         }
-
-        _committed = parameters;
-        _committedChargeProgram = _chargeProgram;
-        _profile = profile;
-        IsStale = false;
-        CalculationErrorDetail = null;
-
-        RefreshResult();
     }
 
     /// <summary>Returns every parameter to its catalogue default and recalculates.</summary>
@@ -195,53 +182,13 @@ public sealed partial class MainViewModel : ObservableObject
         }
     }
 
-    /// <summary>Calculates what is entered, if needed, and saves it as a baseline.</summary>
-    /// <remarks>
-    /// Saving runs the calculation first when the input has moved past the result on
-    /// screen. Asking to save is asking to keep the parameters the operator is
-    /// looking at, and making them press two buttons to do it only invites saving
-    /// the wrong one of the two.
-    /// </remarks>
-    [RelayCommand]
-    public void SaveSnapshot()
-    {
-        if (IsStale || !HasResult)
-        {
-            Calculate();
-        }
-
-        // Still stale means the calculation failed and said so; there is nothing
-        // here worth keeping as a baseline.
-        if (IsStale || _committed is not { } parameters || _profile is not { } profile)
-        {
-            return;
-        }
-
-        HistoryEntryViewModel entry = new(
-            _sequence, _time.GetLocalNow(), parameters, profile, LoadEntry, ToggleBaseline, RemoveEntry, _committedChargeProgram);
-        History.Add(entry);
-        _sequence++;
-
-        NotifyHistoryChanged();
-
-        // The first saved calculation becomes the baseline: without one, every delta
-        // on the screen would stay blank and the optimizer would have nothing to aim at.
-        if (_baseline is null)
-        {
-            ToggleBaseline(entry);
-        }
-        else
-        {
-            RefreshResult();
-        }
-    }
-
     /// <summary>Drops the session history and the baseline with it.</summary>
     [RelayCommand]
     public void ClearHistory()
     {
         History.Clear();
         _baseline = null;
+        _loadedEntry = null;
 
         NotifyHistoryChanged();
         RefreshResult();
@@ -289,6 +236,65 @@ public sealed partial class MainViewModel : ObservableObject
 
     private bool HasFreshResult() => HasResult && !IsStale;
 
+    private bool RunCalculation()
+    {
+        ParameterSet parameters = CurrentParameters;
+        TemperatureProfile profile = _calculator.Calculate(parameters);
+
+        if (!profile.IsFinite)
+        {
+            // Keep the previous result on screen rather than replacing it with a
+            // non-number, and say plainly that it belongs to the previous input.
+            CalculationErrorDetail = DescribeNonFiniteResult(parameters);
+            return false;
+        }
+
+        _committed = parameters;
+        _committedChargeProgram = _chargeProgram;
+        _profile = profile;
+        IsStale = false;
+        CalculationErrorDetail = null;
+
+        RefreshResult();
+        return true;
+    }
+
+    private void AddHistoryEntry(IReadOnlyList<string>? optimizedParams = null)
+    {
+        if (_committed is not { } parameters || _profile is not { } profile)
+        {
+            return;
+        }
+
+        HistoryEntryViewModel entry = new(
+            _sequence,
+            _time.GetLocalNow(),
+            parameters,
+            profile,
+            LoadEntry,
+            ToggleBaseline,
+            RemoveEntry,
+            _committedChargeProgram,
+            optimizedParams);
+        History.Add(entry);
+        _sequence++;
+
+        NotifyHistoryChanged();
+
+        // The first saved calculation becomes the baseline: without one, every delta
+        // on the screen would stay blank and the optimizer would have nothing to aim at.
+        if (_baseline is null)
+        {
+            ToggleBaseline(entry);
+            _loadedEntry = entry;
+            entry.IsLoaded = true;
+        }
+        else
+        {
+            RefreshResult();
+        }
+    }
+
     /// <summary>Republishes everything that depends on the history's contents.</summary>
     /// <remarks>
     /// The last export path is dropped here: once a calculation is added or removed
@@ -329,7 +335,7 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     /// <summary>Writes a parameter set into the input list as one edit, then recalculates.</summary>
-    private void Apply(ParameterSet parameters, ChargeProgram? program, Action afterWrite)
+    private bool Apply(ParameterSet parameters, ChargeProgram? program, Action afterWrite)
     {
         _applyingParameters = true;
         try
@@ -348,7 +354,7 @@ public sealed partial class MainViewModel : ObservableObject
 
         SetChargeProgram(program);
         OnPropertyChanged(nameof(HasOutOfRangeInputs));
-        Calculate();
+        return RunCalculation();
     }
 
     private bool ApplyChargeProgram(ChargeProgram program)
@@ -371,6 +377,12 @@ public sealed partial class MainViewModel : ObservableObject
     private void SetChargeProgram(ChargeProgram? program)
     {
         _chargeProgram = program;
+        bool calculated = program is not null;
+        foreach (ParameterInputViewModel input in StationInputs)
+        {
+            input.IsCalculated = calculated;
+        }
+
         OnPropertyChanged(nameof(ChargeProgramCaption));
     }
 
@@ -383,23 +395,42 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     /// <summary>Takes the optimizer's answer and shows the transition from its starting values.</summary>
-    private void ApplyOptimizerResult(ParameterSet before, ParameterSet found)
+    private void ApplyOptimizerResult(ParameterSet before, ParameterSet found, ChargeProgram? newProgram)
     {
         if (!ReferenceEquals(before, _committed) || !ReferenceEquals(_chargeProgram, _committedChargeProgram))
         {
             return;
         }
 
-        Apply(found, _chargeProgram, () =>
+        string[] changed = [.. ParameterLabels.All
+            .Where(label => Math.Abs(before[label.Parameter] - found[label.Parameter]) > 0.0)
+            .Select(label => label.ShortName)];
+
+        bool ok = Apply(found, newProgram ?? _chargeProgram, () =>
         {
             foreach (ParameterInputViewModel input in Inputs)
             {
                 input.ShowOptimizerChange(before[input.Parameter], found[input.Parameter]);
             }
         });
+
+        if (ok)
+        {
+            AddHistoryEntry(changed);
+        }
     }
 
-    private void LoadEntry(HistoryEntryViewModel entry) => Apply(entry.Parameters, entry.ChargeProgram, ClearOptimizerChanges);
+    private void LoadEntry(HistoryEntryViewModel entry)
+    {
+        if (_loadedEntry is not null)
+        {
+            _loadedEntry.IsLoaded = false;
+        }
+
+        _loadedEntry = entry;
+        entry.IsLoaded = true;
+        Apply(entry.Parameters, entry.ChargeProgram, ClearOptimizerChanges);
+    }
 
     /// <summary>Drops one saved calculation, and the baseline with it if that is what it was.</summary>
     /// <remarks>
@@ -414,6 +445,11 @@ public sealed partial class MainViewModel : ObservableObject
         if (ReferenceEquals(_baseline, entry))
         {
             _baseline = null;
+        }
+
+        if (ReferenceEquals(_loadedEntry, entry))
+        {
+            _loadedEntry = null;
         }
 
         NotifyHistoryChanged();
@@ -464,7 +500,7 @@ public sealed partial class MainViewModel : ObservableObject
         Parameter[] free = ReferenceEquals(_chargeProgram, _committedChargeProgram)
             ? [.. Inputs.Where(input => input.CanOptimize && input.IsFree).Select(input => input.Parameter)]
             : [];
-        Optimization.Refresh(_committed ?? CurrentParameters, _profile, BaselineProfile, free, BaselinePairCaption());
+        Optimization.Refresh(_committed ?? CurrentParameters, _profile, BaselineProfile, free, BaselinePairCaption(), _committedChargeProgram);
     }
 
     private string BaselinePairCaption()

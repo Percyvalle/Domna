@@ -21,7 +21,12 @@ public sealed partial class HistoryEntryViewModel : ObservableObject
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CompareCaption))]
+    [NotifyPropertyChangedFor(nameof(StatusBadge))]
     private bool _isBaseline;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(StatusBadge))]
+    private bool _isLoaded;
 
     public HistoryEntryViewModel(
         int number,
@@ -31,7 +36,8 @@ public sealed partial class HistoryEntryViewModel : ObservableObject
         Action<HistoryEntryViewModel> onLoad,
         Action<HistoryEntryViewModel> onCompare,
         Action<HistoryEntryViewModel> onDelete,
-        ChargeProgram? chargeProgram = null)
+        ChargeProgram? chargeProgram = null,
+        IReadOnlyList<string>? optimizedParameters = null)
     {
         ArgumentNullException.ThrowIfNull(onLoad);
         ArgumentNullException.ThrowIfNull(onCompare);
@@ -42,6 +48,7 @@ public sealed partial class HistoryEntryViewModel : ObservableObject
         Parameters = parameters;
         Profile = profile;
         ChargeProgram = chargeProgram;
+        OptimizedParameters = optimizedParameters;
         _onLoad = onLoad;
         _onCompare = onCompare;
         _onDelete = onDelete;
@@ -63,6 +70,15 @@ public sealed partial class HistoryEntryViewModel : ObservableObject
 
     public ChargeProgram? ChargeProgram { get; }
 
+    /// <summary>Short names of the parameters the optimizer moved; <see langword="null"/> for manual calculations.</summary>
+    public IReadOnlyList<string>? OptimizedParameters { get; }
+
+    public bool IsOptimized => OptimizedParameters is { Count: > 0 };
+
+    public string OptimizerCaption => IsOptimized
+        ? $"Оптимизировано · {string.Join(", ", OptimizedParameters!)}"
+        : string.Empty;
+
     public string Center => DisplayNumber.Fixed(Profile.Center, DisplayNumber.TemperatureDecimals);
 
     public string OreRidge => DisplayNumber.Fixed(Profile.OreRidge, DisplayNumber.TemperatureDecimals);
@@ -70,6 +86,15 @@ public sealed partial class HistoryEntryViewModel : ObservableObject
     public string Periphery => DisplayNumber.Fixed(Profile.Periphery, DisplayNumber.TemperatureDecimals);
 
     public string CompareCaption => IsBaseline ? "Снять базу" : "Сравнить";
+
+    /// <summary>Short badge text combining loaded and baseline state; empty when neither.</summary>
+    public string StatusBadge => (IsBaseline, IsLoaded) switch
+    {
+        (true, true) => "БАЗА · ЭКРАН",
+        (true, false) => "БАЗА",
+        (false, true) => "ЭКРАН",
+        _ => string.Empty,
+    };
 
     /// <summary>Puts this entry's parameters back into the input list and recalculates.</summary>
     [RelayCommand]

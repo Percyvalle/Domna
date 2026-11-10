@@ -20,7 +20,7 @@ public class ChargeProgramEditorTests
         SetPortions(editor.Rows[1], 3, 6, 9);
 
         Assert.True(editor.TryApply(), editor.Error);
-        _screen.SaveSnapshot();
+        _screen.Calculate();
         Assert.Equal(50, Value(Parameter.ChargeStations9To11), 12);
         _screen.Inputs[(int)Parameter.ChargeStations9To11].IsFree = true;
         Assert.False(_screen.Optimization.RunCommand.CanExecute(null));

@@ -243,6 +243,21 @@
                                    Text="{Binding Optimization.PairCaption}" />
                     </Grid>
 
+                    <!-- Mode toggle: visible only when a charge program is committed.
+                         In matrix mode the optimizer moves integer portions between
+                         zones rather than adjusting the share values as continuous
+                         variables, so every candidate it tries is physically realizable. -->
+                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0"
+                                Visibility="{Binding Optimization.HasProgram, Converter={StaticResource BooleanToVisibility}}">
+                        <TextBlock Style="{StaticResource Text.Mono}" VerticalAlignment="Center"
+                                   Foreground="{StaticResource Brush.TextDim}"
+                                   Text="режим:" />
+                        <ToggleButton Style="{StaticResource Button.Toggle}" Margin="8,0,0,0"
+                                      IsChecked="{Binding Optimization.UseMatrixMode, Mode=TwoWay}"
+                                      Content="матрица"
+                                      ToolTip="Оптимизатор перемещает целочисленные порции между зонами вместо непрерывного изменения долей" />
+                    </StackPanel>
+
                     <Grid Margin="0,18,0,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
@@ -306,11 +321,10 @@
                     <ProgressBar Style="{StaticResource Progress.Sweep}"
                                  Visibility="{Binding Optimization.IsRunning, Converter={StaticResource BooleanToVisibility}}" />
 
-                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
-                        <TextBlock Style="{StaticResource Text.Mono}" VerticalAlignment="Center" Text="F"
-                                   ToolTip="{Binding ToolTip, ElementName=MutationWeightInput}" />
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                         <TextBox x:Name="MutationWeightInput"
-                                 Style="{StaticResource Input.Numeric}" Margin="6,0,0,0"
+                                 Style="{StaticResource Input.BoundsEditable}"
+                                 Width="52"
                                  ToolTip="F — масштаб изменения пробных вариантов.&#10;Большее значение увеличивает поисковые шаги, меньшее — уменьшает.&#10;Значение по умолчанию: 0,600.">
                             <TextBox.Text>
                                 <MultiBinding Converter="{StaticResource ParameterValue}"
@@ -320,6 +334,10 @@
                                 </MultiBinding>
                             </TextBox.Text>
                         </TextBox>
+                        <TextBlock Style="{StaticResource Text.Mono}" Margin="4,0,0,0" VerticalAlignment="Center"
+                                   Foreground="{StaticResource Brush.TextFainter}" FontSize="11"
+                                   Text="F"
+                                   ToolTip="{Binding ToolTip, ElementName=MutationWeightInput}" />
                     </StackPanel>
                 </StackPanel>
             </Border>

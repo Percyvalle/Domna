@@ -36,6 +36,9 @@
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Card" Property="BorderBrush" Value="{StaticResource Brush.TextFaint}" />
                             </Trigger>
+                            <DataTrigger Binding="{Binding IsLoaded}" Value="True">
+                                <Setter TargetName="Card" Property="BorderBrush" Value="{StaticResource Brush.TextDim}" />
+                            </DataTrigger>
                             <!-- Last, so the baseline keeps its accent under the cursor. -->
                             <DataTrigger Binding="{Binding IsBaseline}" Value="True">
                                 <Setter TargetName="Card" Property="BorderBrush" Value="{StaticResource Brush.Accent}" />
@@ -47,14 +50,16 @@
             </Setter>
         </Style>
 
-        <Style x:Key="Text.BaselineBadge" TargetType="TextBlock" BasedOn="{StaticResource Text.Mono}">
+        <Style x:Key="Text.StatusBadge" TargetType="TextBlock" BasedOn="{StaticResource Text.Mono}">
             <Setter Property="FontSize" Value="11" />
             <Setter Property="FontWeight" Value="Medium" />
-            <Setter Property="Foreground" Value="{StaticResource Brush.Accent}" />
-            <Setter Property="Text" Value="" />
+            <Setter Property="Text" Value="{Binding StatusBadge}" />
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsBaseline}" Value="True">
-                    <Setter Property="Text" Value="БАЗА" />
+                    <Setter Property="Foreground" Value="{StaticResource Brush.Accent}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsBaseline}" Value="False">
+                    <Setter Property="Foreground" Value="{StaticResource Brush.TextFaint}" />
                 </DataTrigger>
             </Style.Triggers>
         </Style>
@@ -115,7 +120,7 @@
                                 <StackPanel>
                                     <Grid>
                                         <TextBlock Style="{StaticResource Text.MonoStrong}" Text="{Binding Label}" />
-                                        <TextBlock Style="{StaticResource Text.BaselineBadge}"
+                                        <TextBlock Style="{StaticResource Text.StatusBadge}"
                                                    HorizontalAlignment="Right" VerticalAlignment="Center" />
                                     </Grid>
 
@@ -130,6 +135,13 @@
                                                    Foreground="{StaticResource Brush.Zone.Periphery}"
                                                    Text="{Binding Periphery}" />
                                     </StackPanel>
+
+                                    <TextBlock Style="{StaticResource Text.Mono}" Margin="0,8,0,0"
+                                               FontSize="11"
+                                               Foreground="{StaticResource Brush.TextFaint}"
+                                               Text="{Binding OptimizerCaption}"
+                                               TextTrimming="CharacterEllipsis"
+                                               Visibility="{Binding IsOptimized, Converter={StaticResource BooleanToVisibility}}" />
 
                                     <Grid Margin="0,12,0,0">
                                         <Button Style="{StaticResource Button.Chip}"

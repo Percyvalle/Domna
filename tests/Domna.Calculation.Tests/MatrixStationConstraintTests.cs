@@ -68,12 +68,12 @@ public class MatrixStationConstraintTests
     [Fact]
     public void Decode_AtZeroCoords_PutsAllMovableInZone9To11()
     {
-        // At [0,0,0,0] all movable ore and coke flow to zone 9-11; the other zones are empty.
+        // All zeros: each drop sends its entire free-zone allocation to zone 9-11.
         // WorkbookRight has movableOre/totalOre=18/18=1 and movableCoke/totalCoke=16/20=0.8,
         // so share9To11 = 1/(1+0.8) × 100 = 500/9 ≈ 55.6%.
         ChargeProgram program = WorkbookRight();
         MatrixStationConstraint constraint = new(program);
-        ParameterSet result = constraint.Decode(ParameterSet.Defaults, [0.0, 0.0, 0.0, 0.0]);
+        ParameterSet result = constraint.Decode(ParameterSet.Defaults, new double[constraint.Dimensions]);
 
         Assert.Equal(500.0 / 9.0, result[Parameter.ChargeStations9To11], 10);
         Assert.Equal(0.0, result[Parameter.ChargeStations6To8], 10);
@@ -83,11 +83,18 @@ public class MatrixStationConstraintTests
     [Fact]
     public void Decode_AtOneZeroCoords_PutsAllMovableInZone3To5()
     {
-        // u0=1 → all movable ore in zone 3-5; u2=1 → all movable coke in zone 3-5.
-        // Symmetrically produces the same share as the all-zeros case but in zone 3-5.
+        // Setting each drop's first broken-stick coordinate to 1.0 sends the entire
+        // free-zone allocation of every drop to zone 3-5. Produces the same share as
+        // the all-zeros case but in zone 3-5.
         ChargeProgram program = WorkbookRight();
         MatrixStationConstraint constraint = new(program);
-        ParameterSet result = constraint.Decode(ParameterSet.Defaults, [1.0, 0.0, 1.0, 0.0]);
+        double[] coords = new double[constraint.Dimensions];
+        for (int i = 0; i < coords.Length; i += 2)
+        {
+            coords[i] = 1.0;
+        }
+
+        ParameterSet result = constraint.Decode(ParameterSet.Defaults, coords);
 
         Assert.Equal(500.0 / 9.0, result[Parameter.ChargeStations3To5], 10);
         Assert.Equal(0.0, result[Parameter.ChargeStations6To8], 10);
@@ -103,7 +110,12 @@ public class MatrixStationConstraintTests
 
         for (int i = 0; i < 1000; i++)
         {
-            double[] coords = [rng.NextDouble(), rng.NextDouble(), rng.NextDouble(), rng.NextDouble()];
+            double[] coords = new double[constraint.Dimensions];
+            for (int j = 0; j < coords.Length; j++)
+            {
+                coords[j] = rng.NextDouble();
+            }
+
             ParameterSet result = constraint.Decode(ParameterSet.Defaults, coords);
 
             Assert.InRange(result[Parameter.ChargeStations9To11], 0.0, 100.0);
@@ -140,13 +152,32 @@ public class MatrixStationConstraintTests
     [Fact]
     public void MatrixMode_OptimizerCanReachTargetBuiltFromIntegerRedistribution()
     {
-        // The optimizer in matrix mode should converge when the target profile is exactly
-        // achievable by putting all movable ore and coke into zone 9-11 (coords = all zeros).
-        ChargeProgram program = WorkbookRight();
-        TemperatureProfileCalculator calculator = new();
+        // A single ore drop and a single coke drop give 4 search dimensions — the
+        // same size as the old aggregate encoding — so the standard budget is enough
+        // to converge to machine precision. The target puts all movable material into
+        // zone 9-11 (all-zeros coordinates); this is an integer-achievable point.
+        static int[] Portions(params (int Station, int Count)[] entries)
+        {
+            int[] p = new int[ChargeDrop.StationCount];
+            foreach ((int s, int c) in entries)
+            {
+                p[s - 1] = c;
+            }
 
-        ParameterSet startPs = new MatrixStationConstraint(program).Decode(ParameterSet.Defaults, new MatrixStationConstraint(program).Encode());
-        ParameterSet targetPs = new MatrixStationConstraint(program).Decode(ParameterSet.Defaults, [0.0, 0.0, 0.0, 0.0]);
+            return p;
+        }
+
+        ChargeProgram program = new(
+        [
+            new ChargeDrop(ChargeMaterial.Ore,  Portions((9, 2), (8, 1), (6, 1), (5, 1), (3, 1))),
+            new ChargeDrop(ChargeMaterial.Coke, Portions((11, 1), (10, 1), (7, 1), (4, 1))),
+        ]);
+
+        TemperatureProfileCalculator calculator = new();
+        MatrixStationConstraint constraint = new(program);
+
+        ParameterSet startPs = constraint.Decode(ParameterSet.Defaults, constraint.Encode());
+        ParameterSet targetPs = constraint.Decode(ParameterSet.Defaults, new double[constraint.Dimensions]);
         TemperatureProfile target = calculator.Calculate(targetPs);
 
         OptimizationRequest request = new()

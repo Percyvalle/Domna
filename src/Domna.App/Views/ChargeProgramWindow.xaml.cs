@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Input;
 using System.Windows.Threading;
 using Domna.Domain.Models;
 using Domna.UI.ViewModels;
@@ -12,6 +13,7 @@ namespace Domna.App.Views;
 public partial class ChargeProgramWindow : Window
 {
     private readonly ChargeProgramEditorViewModel _editor;
+    private bool _isCellEditing;
 
     public ChargeProgramWindow(ChargeProgramEditorViewModel editor)
     {
@@ -28,6 +30,28 @@ public partial class ChargeProgramWindow : Window
             Matrix.Columns.Add(Column(
                 station.ToString(CultureInfo.CurrentCulture),
                 string.Create(CultureInfo.InvariantCulture, $"{nameof(ChargeDropRowViewModel.Portions)}[{station - 1}]")));
+        }
+
+        Matrix.BeginningEdit += (_, _) => _isCellEditing = true;
+        Matrix.CellEditEnding += (_, _) => _isCellEditing = false;
+    }
+
+    // Intercepts Ctrl+V at the window level so the user can paste a full matrix
+    // copied from Excel. Tab-delimited clipboard text is treated as a matrix paste;
+    // plain text without tabs passes through to the focused cell editor as usual.
+    protected override void OnPreviewKeyDown(KeyEventArgs e)
+    {
+        base.OnPreviewKeyDown(e);
+
+        if (e.Key == Key.V
+            && (Keyboard.Modifiers & ModifierKeys.Control) != 0
+            && !_isCellEditing
+            && Clipboard.ContainsText()
+            && Clipboard.GetText() is { } text
+            && text.Contains('\t'))
+        {
+            _editor.TryPaste(text);
+            e.Handled = true;
         }
     }
 

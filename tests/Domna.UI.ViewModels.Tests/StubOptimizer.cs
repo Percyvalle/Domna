@@ -9,6 +9,8 @@ internal sealed class StubOptimizer : IParameterOptimizer
 {
     public ParameterSet? Answer { get; set; }
 
+    public ChargeProgram? AnswerProgram { get; set; }
+
     public OptimizationRequest? LastRequest { get; private set; }
 
     public OptimizationOutcome Optimize(
@@ -19,6 +21,6 @@ internal sealed class StubOptimizer : IParameterOptimizer
         LastRequest = request;
         progress?.Invoke(new OptimizationProgress(1, 1, 0.0));
 
-        return new OptimizationOutcome(Answer ?? request.Start, 0.0, 1, false);
+        return new OptimizationOutcome(Answer ?? request.Start, 0.0, 1, false, AnswerProgram);
     }
 }

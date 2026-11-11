@@ -259,7 +259,7 @@ public sealed partial class MainViewModel : ObservableObject
         return true;
     }
 
-    private void AddHistoryEntry(IReadOnlyList<string>? optimizedParams = null)
+    private void AddHistoryEntry(IReadOnlyList<string>? optimizedParams = null, ChargeProgram? previousChargeProgram = null)
     {
         if (_committed is not { } parameters || _profile is not { } profile)
         {
@@ -275,7 +275,8 @@ public sealed partial class MainViewModel : ObservableObject
             ToggleBaseline,
             RemoveEntry,
             _committedChargeProgram,
-            optimizedParams);
+            optimizedParams,
+            previousChargeProgram);
         History.Add(entry);
         _sequence++;
 
@@ -402,6 +403,8 @@ public sealed partial class MainViewModel : ObservableObject
             return;
         }
 
+        ChargeProgram? previousProgram = _committedChargeProgram;
+
         string[] changed = [.. ParameterLabels.All
             .Where(label => Math.Abs(before[label.Parameter] - found[label.Parameter]) > 0.0)
             .Select(label => label.ShortName)];
@@ -416,7 +419,7 @@ public sealed partial class MainViewModel : ObservableObject
 
         if (ok)
         {
-            AddHistoryEntry(changed);
+            AddHistoryEntry(changed, previousProgram);
         }
     }
 

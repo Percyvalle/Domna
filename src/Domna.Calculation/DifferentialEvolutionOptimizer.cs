@@ -129,7 +129,11 @@ public sealed class DifferentialEvolutionOptimizer : IParameterOptimizer
         OptimizationRequest request, ChargeProgram program)
     {
         int[] freeZoneBuckets = GetFreeZoneBuckets(request.FreeParameters);
-        MatrixStationConstraint matrix = new(program, freeZoneBuckets);
+
+        IMatrixConstraint matrix = request.StationMode is ChargeStationMode.Matrix { MatrixMode: MatrixOptimizerMode.Aggregate }
+            ? new AggregateStationConstraint(program, freeZoneBuckets)
+            : new MatrixStationConstraint(program, freeZoneBuckets);
+
         Parameter[] freeNonStation = [.. request.FreeParameters.Distinct().Where(IsNonStation)];
 
         // Nothing moves: no non-station params are free and the matrix has

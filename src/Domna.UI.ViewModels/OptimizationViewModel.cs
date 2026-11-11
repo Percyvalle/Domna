@@ -56,6 +56,16 @@ public sealed partial class OptimizationViewModel : ObservableObject
     [ObservableProperty]
     private bool _useMatrixMode;
 
+    /// <summary>
+    /// Selects the redistribution strategy within matrix mode.
+    /// True: aggregate — ore and coke are pooled across all drops, so the optimizer
+    /// can effectively transfer portions between drops of the same material type.
+    /// False: per-drop — each drop redistributes its own portions independently.
+    /// Has no effect when <see cref="UseMatrixMode"/> is false.
+    /// </summary>
+    [ObservableProperty]
+    private bool _useAggregateMatrixMode = true;
+
     /// <summary>Mutation scaling factor (DE parameter F) passed to the next search.</summary>
     [ObservableProperty]
     private double _mutationWeight = 0.6;
@@ -184,6 +194,10 @@ public sealed partial class OptimizationViewModel : ObservableObject
 
     private async Task SearchAsync()
     {
+        MatrixOptimizerMode matrixMode = UseAggregateMatrixMode
+            ? MatrixOptimizerMode.Aggregate
+            : MatrixOptimizerMode.PerDrop;
+
         OptimizationRequest request = new()
         {
             Start = _start,
@@ -191,7 +205,7 @@ public sealed partial class OptimizationViewModel : ObservableObject
             FreeParameters = _free,
             Settings = new SearchSettings { MutationWeight = MutationWeight },
             StationMode = UseMatrixMode && _program is not null
-                ? new ChargeStationMode.Matrix(_program)
+                ? new ChargeStationMode.Matrix(_program, matrixMode)
                 : new ChargeStationMode.Continuous(),
         };
 

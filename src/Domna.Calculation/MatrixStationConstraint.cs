@@ -36,7 +36,7 @@ namespace Domna.Calculation;
 /// count, so a richer program gives the optimizer finer resolution.
 /// </para>
 /// </remarks>
-internal sealed class MatrixStationConstraint
+internal sealed class MatrixStationConstraint : IMatrixConstraint
 {
     // Bucket layout: index 0 = stations 1–2 (pinned), 1 = 3–5, 2 = 6–8, 3 = 9–11.
     // Per-drop zone counts: [dropIndex][zoneIndex] where zoneIndex indexes into _freeZoneBuckets.

@@ -258,6 +258,18 @@
                                       ToolTip="Оптимизатор перемещает целочисленные порции между зонами вместо непрерывного изменения долей" />
                     </StackPanel>
 
+                    <!-- Sub-mode toggle: aggregate vs per-drop, visible only in matrix mode. -->
+                    <StackPanel Orientation="Horizontal" Margin="0,6,0,0"
+                                Visibility="{Binding Optimization.UseMatrixMode, Converter={StaticResource BooleanToVisibility}}">
+                        <TextBlock Style="{StaticResource Text.Mono}" VerticalAlignment="Center"
+                                   Foreground="{StaticResource Brush.TextDim}"
+                                   Text="метод:" />
+                        <ToggleButton Style="{StaticResource Button.Toggle}" Margin="8,0,0,0"
+                                      IsChecked="{Binding Optimization.UseAggregateMatrixMode, Mode=TwoWay}"
+                                      Content="агрегатный"
+                                      ToolTip="Агрегатный (активен): руда и кокс перераспределяются суммарно по зонам — возможен перенос между строками матрицы.&#10;Выключено: каждая строка матрицы перераспределяется только горизонтально." />
+                    </StackPanel>
+
                     <Grid Margin="0,18,0,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />

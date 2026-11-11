@@ -22,5 +22,7 @@ public abstract record ChargeStationMode
     /// The ore and coke totals are conserved from <paramref name="Program"/>; stations 1–2
     /// are pinned. All three free zones move jointly.
     /// </summary>
-    public sealed record Matrix(ChargeProgram Program) : ChargeStationMode;
+    public sealed record Matrix(
+        ChargeProgram Program,
+        MatrixOptimizerMode MatrixMode = MatrixOptimizerMode.Aggregate) : ChargeStationMode;
 }
